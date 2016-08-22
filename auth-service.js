@@ -83,7 +83,7 @@ function isValidLength(str, minLength) {
 }
 
 function createError(status, reqId, error) {
-  error.id = uuid.v1();
+  error.id = uuid.v4();
   return createMsg(status, reqId, { error: error });
 }
 
