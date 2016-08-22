@@ -1,0 +1,23 @@
+{
+  "name": "fruster-auth-service",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "start": "node ./app.js",
+    "test": "./node_modules/.bin/jasmine"
+  },
+  "dependencies": {
+    "fruster-bus": "0.0.3",
+    "jwt-simple": "^0.5.0",
+    "lodash": "^4.15.0",
+    "ms": "^0.7.1",
+    "nats": "^0.6.4",
+    "npm": "^3.10.6",
+    "uuid": "^2.0.2",
+    "winston": "^2.2.0"
+  },
+  "devDependencies": {
+    "jasmine": "^2.4.1",
+    "nats-server-control": "0.0.1"
+  }
+}
