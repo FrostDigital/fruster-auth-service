@@ -3,19 +3,23 @@
 var conf = require('./conf');
 var log = require('./log');
 var uuid = require('uuid');
-//var jwt = require('jwt-simple');
 var _ = require('lodash');
 var bus = require('fruster-bus');
+var jwt = require('./jwt');
+var ms = require('ms');
 
 var ERR_CODE_INVALID_USERNAME_FORMAT = 4001,
     ERR_CODE_INVALID_PASSWORD_FORMAT = 4002,
     ERR_CODE_UNEXPECTED_AUTH_ERROR = 5001;
 
+// TODO: Login for web
+// TODO: Decode JWT token
+
 module.exports.start = function(busAddress) {  
   return bus.connect(busAddress).then(function() {
     bus.subscribe('http.post.auth.login.web', loginWeb);
     // bus.subscribe('http.post.auth.login.app', loginApp);
-    // bus.subscribe('auth.decrypt', validateToken);      
+    // bus.subscribe('auth.decode', decodeToken);      
   });
 };
 
@@ -53,10 +57,11 @@ function loginWeb(req) {
     return err;
   }
 
-  function handleAuthSuccess(res) {
+  function handleAuthSuccess(res) {    
     log.debug('Successfully authenticated user', login.username);
+
     res.headers = {
-      'Set-Cookie': 'TODO'
+      'Set-Cookie': bakeCookie(jwt.encode(res.data), ms(conf.jwtCookieAge))
     };
     return res;
   }
@@ -65,6 +70,12 @@ function loginWeb(req) {
     .request('user.validate-password', { reqId: req.reqId, data: login })
     .then(handleAuthSuccess)
     .catch(handleAuthError);  
+}
+
+function bakeCookie(jwt, expiresInMs) {
+  var d = new Date();
+  d.setTime(d.getTime() + expiresInMs); 
+  return 'jwt=' + jwt + ';path=/;expires=' + d.toGMTString() + '; HttpOnly;';
 }
 
 function isValidLength(str, minLength) {
