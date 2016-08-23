@@ -90,11 +90,11 @@ Login for non web devices such as native mobile apps.
         }
     }
 
-### Decrypt JWT token
+### Decode JWT token
 
 #### Subject
 
-    auth.decrypt
+    auth.decode
 
 #### Request
 
