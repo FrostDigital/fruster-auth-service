@@ -10,6 +10,7 @@
     "fruster-bus": "0.0.3",
     "jwt-simple": "^0.5.0",
     "lodash": "^4.15.0",
+    "mongo-bluebird": "0.0.6",
     "ms": "^0.7.1",
     "nats": "^0.6.4",
     "npm": "^3.10.6",
@@ -18,6 +19,7 @@
   },
   "devDependencies": {
     "cookie": "^0.3.1",
+    "embedded-mongo-spec": "0.0.13",
     "jasmine": "^2.4.1",
     "nats-server-control": "0.0.1"
   }

@@ -7,25 +7,30 @@ var _ = require('lodash');
 var bus = require('fruster-bus');
 var jwt = require('./jwt');
 var ms = require('ms');
+var mongo = require('mongodb-bluebird');
 
 var ERR_CODE_INVALID_USERNAME_FORMAT = 4001,
     ERR_CODE_INVALID_PASSWORD_FORMAT = 4002,
     ERR_CODE_UNEXPECTED_AUTH_ERROR = 5001;
 
-// TODO: Decode JWT token
+var refreshTokensCollection;
 
-module.exports.start = function(busAddress) {  
-  return bus.connect(busAddress).then(function() {
-    bus.subscribe('http.post.auth.login.web', function(req) { 
-      return login(req, true);
+module.exports.start = function(busAddress, mongoUrl) {  
+  return bus.connect(busAddress)
+    //.then(() => mongo.connect(mongoUrl))
+    // .then(db => {
+    //   refreshTokensCollection = db.collection(conf.refreshTokenCollection);
+    // })
+    .then(() => {
+      bus.subscribe('http.post.auth.login.web', req => login(req, true));
+      bus.subscribe('http.post.auth.login.app', req => login(req, false));      
+      bus.subscribe('auth.decode', decodeToken);      
     });
-    
-    bus.subscribe('http.post.auth.login.app', function(req) { 
-      return login(req, false); 
-    });    
-    // bus.subscribe('auth.decode', decodeToken);      
-  });
 };
+
+function decodeToken(req) {
+  // TODO
+}
 
 function login(req, isWeb) {
   var credentials = req.data;
@@ -79,11 +84,7 @@ function login(req, isWeb) {
   }
   
   return bus
-    .request('user.validate-password', { reqId: req.reqId, data: login })
-    .then(function(res) { 
-      log.debug('Successfully authenticated user', credentials.username);
-      return res;
-    })
+    .request('user.validate-password', { reqId: req.reqId, data: login })    
     .then(isWeb ? loginWeb : loginApp)
     .catch(handleAuthError);  
 }

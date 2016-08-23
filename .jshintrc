@@ -1,5 +1,6 @@
 {
   "unused": true,
   "node": true,
-  "latedef": false
+  "latedef": false,
+  "esnext":true
 }

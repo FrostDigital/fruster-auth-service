@@ -24,7 +24,12 @@ module.exports = {
   userAttrsWhitelist: parseArray(process.env.USER_ATTRS_WHITELIST) || ['id', 'firstName', 'lastName', 'mail'],
 
   // How long JWT cookie will survive
-  jwtCookieAge: process.env.JWT_COOKIE_AGE || '10d'
+  jwtCookieAge: process.env.JWT_COOKIE_AGE || '10d',
+
+  // Mongo database URL
+  mongoUrl: process.env.MONGO_URL || 'mongodb://localhost:27017',
+
+  refreshTokenCollection: 'refresh-tokens'
   
 };
 
