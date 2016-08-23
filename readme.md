@@ -159,16 +159,22 @@ During development `nodemon` is handy, it will watch and restart server when fil
 Configuration is set with environment variables. All config defaults to values that makes sense for development.
   
     # Applications log level (error|warn|info|debug|silly)
-    LOG_LEVEL = 'debug'
+    LOG_LEVEL = "debug"
     
     # NATS servers, set multiple if using cluster
     # Example: `"nats://10.23.45.1:4222,nats://10.23.41.8:4222"`
     BUS = "nats://localhost:4222"
     
-    SESSION_TOKEN_TTL = '24h'
+    SESSION_TOKEN_TTL = "24h"
 
-    REFRESH_TOKEN_TTL = '365d'
+    REFRESH_TOKEN_TTL = "365d"
 
-    USER_SERVICE_SUBJECT = 'user.get-user'
+    USER_SERVICE_SUBJECT = "user.get-user"
+
+    // JWT secret used to encode/decode tokens
+    JWT_SECRET = "fe1a1915a379f3be5394b64d14794932"
+
+    // Attributes on user object to use in JWT token 
+    USER_ATTRS_WHITELIST = "id,firstName,lastName,mail"
     
     

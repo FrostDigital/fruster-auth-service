@@ -15,13 +15,22 @@ module.exports = {
 
   // Username min lengtn
   // Does not apply if login in with email address
-  usernameMinLength: process.env.USERNAME_MIN_LENGTH || 3
+  usernameMinLength: process.env.USERNAME_MIN_LENGTH || 3,
 
+  // JWT secret used to encode/decode tokens
+  secret: process.env.JWT_SECRET || 'fe1a1915a379f3be5394b64d14794932',
+
+  // Attributes on user object to use in JWT token
+  userAttrsWhitelist: parseArray(process.env.USER_ATTRS_WHITELIST) || ['id', 'firstName', 'lastName', 'mail'],
+
+  // How long JWT cookie will survive
+  jwtCookieAge: process.env.JWT_COOKIE_AGE || '10d'
+  
 };
 
-function parseBool(str, defaultVal) {
-  return !str ? defaultVal : str === 'true';
-}
+// function parseBool(str, defaultVal) {
+//   return !str ? defaultVal : str === 'true';
+// }
 
 function parseArray(str) {
   if(str) {
