@@ -7,9 +7,6 @@ module.exports = {
   // Applications log level (error|warn|info|debug|silly)
   logLevel: parseLogLevel(process.env.LOG_LEVEL) || 'debug',
 
-  // Mongo database URL
-  database: process.env.DATABASE || 'localhost:4321',
-
   // Password min length
   passwordMinLength: process.env.PASSWORD_MIN_LENGTH || 6,
 

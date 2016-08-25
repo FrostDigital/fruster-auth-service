@@ -170,24 +170,34 @@ During development `nodemon` is handy, it will watch and restart server when fil
 ## Configuration
 
 Configuration is set with environment variables. All config defaults to values that makes sense for development.
-  
+    
+    # Mongo database URL
+    MONGO_URL = "mongodb://localhost:27017"
+
     # Applications log level (error|warn|info|debug|silly)
     LOG_LEVEL = "debug"
     
     # NATS servers, set multiple if using cluster
     # Example: `"nats://10.23.45.1:4222,nats://10.23.41.8:4222"`
     BUS = "nats://localhost:4222"
-    
-    SESSION_TOKEN_TTL = "24h"
-
+        
+    # How long refresh token is valid
     REFRESH_TOKEN_TTL = "365d"
+    
+    # How long access token is valid
+    ACCESS_TOKEN_TTL = "1d"
 
     USER_SERVICE_SUBJECT = "user.get-user"
 
-    // JWT secret used to encode/decode tokens
+    # JWT secret used to encode/decode tokens
     JWT_SECRET = "fe1a1915a379f3be5394b64d14794932"
+    
+    # Access token cookie expiration (only used for web auth)
+    ACCESS_TOKEN_COOKIE_AGE = "10d",
 
-    // Attributes on user object to use in JWT token 
+    # Attributes on user object to use in JWT token 
     USER_ATTRS_WHITELIST = "id,firstName,lastName,mail"
+    
+
     
     
