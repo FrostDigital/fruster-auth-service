@@ -26,6 +26,9 @@ module.exports = {
   // How long JWT cookie will survive
   jwtCookieAge: process.env.JWT_COOKIE_AGE || '10d',
 
+  // How long a refresh token is valid
+  refreshTokenTTL: process.env.REFRESH_TOKEN_TTL || '365d',
+
   // Mongo database URL
   mongoUrl: process.env.MONGO_URL || 'mongodb://localhost:27017',
 

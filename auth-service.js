@@ -8,59 +8,96 @@ var bus = require('fruster-bus');
 var jwt = require('./jwt');
 var ms = require('ms');
 var mongo = require('mongodb-bluebird');
-
-var ERR_CODE_INVALID_USERNAME_FORMAT = 4001,
-    ERR_CODE_INVALID_PASSWORD_FORMAT = 4002,
-    ERR_CODE_UNEXPECTED_AUTH_ERROR = 5001;
+var errors = require('./errors');
 
 var refreshTokensCollection;
 
-module.exports.start = function(busAddress, mongoUrl) {  
+module.exports.start = function(busAddress, mongoUrl) { 
   return bus.connect(busAddress)
-    //.then(() => mongo.connect(mongoUrl))
-    // .then(db => {
-    //   refreshTokensCollection = db.collection(conf.refreshTokenCollection);
-    // })
+    .then(() => mongo.connect(mongoUrl))
+    .then(db => {
+      refreshTokensCollection = db.collection(conf.refreshTokenCollection);
+    })
     .then(() => {
       bus.subscribe('http.post.auth.login.web', req => login(req, true));
       bus.subscribe('http.post.auth.login.app', req => login(req, false));      
+      bus.subscribe('http.post.auth.refresh', refreshAccessToken);      
       bus.subscribe('auth.decode', decodeToken);      
     });
 };
 
-function decodeToken(req) {
-  // TODO
+/**
+ * Decodes JWT token in req.data into JSON.
+ * Throws error `invalidJwtToken` if token could not be decoded. 
+ */
+function decodeToken(req) {    
+  var res;
+
+  try {    
+    res = createResponse(200, {
+      data: jwt.decode(req.data)
+    });
+  } catch(ex) {
+    log.debug('Failed to decode JWT');
+    res = errors.invalidJwtToken();
+  }
+
+  return res;
+}
+
+/**
+ * Returns a new access token from given refresh token.
+ * Will throw error if refresh token is missing, invalid or expired.
+ */
+function refreshAccessToken(req) {  
+  var refreshToken = req.data;
+
+  if(!refreshToken) {
+    return errors.missingRefreshToken();
+  }
+
+  return refreshTokensCollection
+    .findOne({ token: refreshToken })
+    .then(validateRefreshToken)    
+    .then(userId => createNewAccessToken(userId))
+    .then(accessToken => createResponse(200, { data: accessToken }));
+}
+
+function validateRefreshToken(token) {
+  var err;
+
+  if(!token) {
+    err = errors.refreshTokenNotFound();
+  }      
+  else if(token.expired || token.expires.getTime() < new Date().getTime()) {
+    err = errors.refreshTokenExpired(token);
+  }
+  
+  if(err) {
+    log.debug(err.error.detail);    
+    throw err;
+  }
+
+  return token.userId;
 }
 
 function login(req, isWeb) {
   var credentials = req.data;
 
   if(!isValidLength(credentials.username, conf.usernameMinLength)) {
-    return createMsg(400, req.reqId, { 
-      code: ERR_CODE_INVALID_USERNAME_FORMAT, 
-      title: 'Invalid username format',
-      detail: 'Username is to short: ' + credentials.username
-    });
+    return errors.invalidUsernameFormat(credentials.username);
   }
 
   if(!isValidLength(credentials.password, conf.passwordMinLength)) {
-    return createMsg(400, req.reqId, { 
-      code: ERR_CODE_INVALID_PASSWORD_FORMAT, 
-      title: 'Invalid password format'
-    });
+    return errors.invalidPasswordFormat();
   }
 
   function handleAuthError(err) {
     log.debug('User service failed validating username/password', err.status);
 
     if(err.status !== 401 && err.status !== 403) {
-      log.warn('Recieved unexpected error from user service', err);
-      
-      return createError(500, req.reqId, { 
-        code: ERR_CODE_UNEXPECTED_AUTH_ERROR, 
-        title: 'Unexpected error while validating password', 
-        detail: err.detail 
-      });
+      log.warn('Recieved unexpected error from user service', err);      
+      return errors.unexpectedError(err.detail);
     }
 
     return err;
@@ -68,26 +105,49 @@ function login(req, isWeb) {
 
   function loginWeb(res) {    
     log.debug('Successfully authenticated user', credentials.username);
+
+    var whitelistedUser = getWhitelistedUser(res.data);
+
     res.headers = {
-      'Set-Cookie': bakeCookie(jwt.encode(res.data), ms(conf.jwtCookieAge))
+      'Set-Cookie': bakeCookie(jwt.encode(whitelistedUser), ms(conf.jwtCookieAge))
     };
+
+    res.data = whitelistedUser;
+    
     return res;
   }
 
   function loginApp(res) {    
+    var whitelistedUser = getWhitelistedUser(res.data);
+    var refreshToken = uuid.v4();
+
     res.data = {
-      accessToken: jwt.encode(res.data),
-      refreshToken: uuid.v4()
-      // TODO: Return more user fields?
+      accessToken: jwt.encode(whitelistedUser),
+      refreshToken: refreshToken,
+      profile: whitelistedUser
     };
-    return res;
+
+    return saveRefreshToken(refreshToken, whitelistedUser.id)
+      .then(() => res)
+      .catch(errors.unexpectedError('Failed saving refresh token'));    
   }
   
   return bus
-    .request('user.validate-password', { reqId: req.reqId, data: login })    
+    .request('user-service.validate-password', { reqId: req.reqId, data: login })    
     .then(isWeb ? loginWeb : loginApp)
     .catch(handleAuthError);  
 }
+
+function saveRefreshToken(token, userId) {
+  return refreshTokensCollection.insert({
+    _id: uuid.v4(),
+    token: token,
+    userId: userId,
+    expired: false,
+    expires: new Date(new Date().getTime() + conf.refreshTokenTTL)
+  });
+}
+
 
 function bakeCookie(jwt, expiresInMs) {
   var d = new Date();
@@ -99,14 +159,8 @@ function isValidLength(str, minLength) {
   return str && str.length >= minLength;
 }
 
-function createError(status, reqId, error) {
-  error.id = uuid.v4();
-  return createMsg(status, reqId, { error: error });
-}
-
-function createMsg(status, reqId, msg) {
+function createResponse(status, msg) {
   return _.extend({}, msg, {
-    reqId: reqId,
     status: status
   });
 }
@@ -129,4 +183,12 @@ function getWhitelistedUser(user) {
   }
 
   return oUser;
+}
+
+function createNewAccessToken(userId) {
+  return bus
+    .request('user-service.get', { id: userId })
+    .then(userResp => {      
+      return jwt.encode(getWhitelistedUser(userResp.data));
+    });  
 }
