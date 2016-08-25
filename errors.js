@@ -3,8 +3,8 @@ const uuid = require('uuid');
 const errorCode = {
   invalidUsernameFormat: 4001,
   invalidPasswordFormat: 4002,
-  invalidJwtToken: 4003,
-  refreshTokenExpired: 4031,
+  invalidAccessToken: 4031,
+  refreshTokenExpired: 4201,
   refrehTokenNotFound: 4041, 
   missingRefreshToken: 4006,
   unexpectedError: 5001
@@ -23,7 +23,7 @@ module.exports = {
   },
 
   refreshTokenExpired: function(token) {
-    return err(403, errorCode.refreshTokenExpired, 'Refresh token expired', 
+    return err(420, errorCode.refreshTokenExpired, 'Refresh token expired', 
       'Refresh token "' + token.token + '" is expired ' + (token.expired ? 'by flag' : 'since ' + token.expires)); 
   },
 
@@ -39,8 +39,8 @@ module.exports = {
     return err(400, errorCode.invalidUsernameFormat, 'Invalid username format', 'Invalid username: ' + username);
   },
 
-  invalidJwtToken: function() {
-    return err(400, errorCode.invalidJwtToken, 'Invalid JWT token');
+  invalidAccessToken: function() {
+    return err(403, errorCode.invalidAccessToken, 'Invalid JWT token');
   }
 
 };

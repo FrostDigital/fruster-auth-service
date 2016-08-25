@@ -22,14 +22,14 @@ module.exports.start = function(busAddress, mongoUrl) {
       bus.subscribe('http.post.auth.web', req => login(req, true));
       bus.subscribe('http.post.auth.app', req => login(req, false));      
       bus.subscribe('http.post.auth.refresh', refreshAccessToken);      
-      bus.subscribe('auth.decode', decodeToken);      
+      bus.subscribe('auth-service.decode-access-token', decodeToken);      
     })
     .then(() => log.info('Auth service is up and running'));
 };
 
 /**
  * Decodes JWT token in req.data into JSON.
- * Throws error `invalidJwtToken` if token could not be decoded. 
+ * Throws error `invalidAccessToken` if token could not be decoded. 
  */
 function decodeToken(req) {    
   var res;
@@ -40,7 +40,7 @@ function decodeToken(req) {
     });
   } catch(ex) {
     log.debug('Failed to decode JWT');
-    res = errors.invalidJwtToken();
+    res = errors.invalidAccessToken();
   }
 
   return res;

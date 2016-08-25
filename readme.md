@@ -17,7 +17,7 @@ Login for web applications. with `username` and `password` and return JWT in `Se
 
 #### Subject
     
-    http.post.auth.login.web
+    http.post.auth.web
 
 #### Request 
     
@@ -41,14 +41,13 @@ Login for web applications. with `username` and `password` and return JWT in `Se
 
 #### Failure response
 
-    {
-        "status": 401,
-        "error" {
-            "code": 401,
-            "title": "Unauthorized",
-            "detail": "Invalid username or password"
-        }
-    }
+* 401 Unauthorized
+* 403 Not allowed
+* 400 / 4001 Invalid password format
+* 400 / 4002 Invalid username format
+* 403 / 4002 Invalid access token
+* 500 / 5001 Unexpected error
+
 
 ## App login
 
@@ -81,20 +80,50 @@ Login for non web devices such as native mobile apps.
 
 #### Failure response:
 
+* 401 Unauthorized
+* 403 Not allowed
+* 400 / 4001 Invalid password format
+* 400 / 4002 Invalid username format
+* 500 / 5001 Unexpected error
+
+
+## Refresh access token
+
+Get fresh access token by providing a refresh token.
+
+#### Subject
+    
+    http.post.auth.refresh
+
+#### Request
+    
     {
-        "status": 401,
-        "error" {
-            "code": 401,
-            "title": "Unauthorized",
-            "detail": "Invalid username or password"
+        // ...
+        "data": "{refresh token}"
+    }
+
+#### Success response
+
+    {
+        // ...
+        "status": 200,
+        "data": {
+            "accessToken": "{jwt token}"
         }
     }
+
+#### Failure response:
+
+* 400 / 4006 Refresh token not provided
+* 404 / 4041 Refresh token not found
+* 420 / 4031 Refresh token expired
+
 
 ### Decode JWT token
 
 #### Subject
 
-    auth.decode
+    auth.decode-access-token
 
 #### Request
 
@@ -115,26 +144,10 @@ Login for non web devices such as native mobile apps.
 
 #### Failure response
 
-If signing failed (which indicates that JWT has been tampered with):
+* 400 / 4006 Refresh token not provided
+* 404 / 4041 Refresh token not found
+* 420 / 4031 Refresh token expired
 
-    {
-        status: 400,
-        error: {
-            code: 400,
-            title: "Failed to sign JWT token"            
-        }
-    }
-
-If token has expired:
-
-    {
-        status: 420,
-        error: {
-            code: 420,
-            title: "JWT token has expired",
-            detail: "Token expired 23 min ago"            
-        }
-    }
 
 ## Run
 

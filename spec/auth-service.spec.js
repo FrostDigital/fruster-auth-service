@@ -209,7 +209,7 @@ describe('Auth service', () => {
       var encodedToken = jwt.encode({foo: 'bar'});
 
       bus
-        .request('auth.decode', { reqId: reqId, data: encodedToken })
+        .request('auth-service.decode-access-token', { reqId: reqId, data: encodedToken })
         .then(resp => {
           expect(resp.data.foo).toBe('bar');
           expect(resp.reqId).toBe(reqId);
@@ -223,10 +223,10 @@ describe('Auth service', () => {
       var encodedToken = 'poop';
 
       bus
-        .request('auth.decode', { reqId: reqId, data: encodedToken })
+        .request('auth-service.decode-access-token', { reqId: reqId, data: encodedToken })
         .then(done.fail)
         .catch(err => {
-          expect(err.status).toBe(400);
+          expect(err.status).toBe(403);
           expect(err.reqId).toBe(reqId);           
           done();
         });
@@ -297,7 +297,7 @@ describe('Auth service', () => {
         .request('http.post.auth.refresh', { data: 'expiredToken' })
         .then(done.fail)
         .catch(resp => {        
-          expect(resp.status).toBe(403);          
+          expect(resp.status).toBe(420);          
           expect(resp.error.code).toBe(errors.code.refreshTokenExpired);          
           done();          
         });
@@ -308,7 +308,7 @@ describe('Auth service', () => {
         .request('http.post.auth.refresh', { data: 'expiredByDateToken' })
         .then(done.fail)
         .catch(resp => {
-          expect(resp.status).toBe(403);          
+          expect(resp.status).toBe(420);          
           expect(resp.error.code).toBe(errors.code.refreshTokenExpired);          
           done();
         });
