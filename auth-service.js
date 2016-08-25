@@ -19,11 +19,12 @@ module.exports.start = function(busAddress, mongoUrl) {
       refreshTokensCollection = db.collection(conf.refreshTokenCollection);
     })
     .then(() => {
-      bus.subscribe('http.post.auth.login.web', req => login(req, true));
-      bus.subscribe('http.post.auth.login.app', req => login(req, false));      
+      bus.subscribe('http.post.auth.web', req => login(req, true));
+      bus.subscribe('http.post.auth.app', req => login(req, false));      
       bus.subscribe('http.post.auth.refresh', refreshAccessToken);      
       bus.subscribe('auth.decode', decodeToken);      
-    });
+    })
+    .then(() => log.info('Auth service is up and running'));
 };
 
 /**

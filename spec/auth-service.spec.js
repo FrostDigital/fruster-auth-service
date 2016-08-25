@@ -68,7 +68,7 @@ describe('Auth service', () => {
       });
 
       bus
-        .request('http.post.auth.login.web', { 
+        .request('http.post.auth.web', { 
           reqId: reqId, 
           data: {
             username: 'joelsoderstrom', 
@@ -103,7 +103,7 @@ describe('Auth service', () => {
       });
 
       bus
-        .request('http.post.auth.login.web', { 
+        .request('http.post.auth.web', { 
           reqId: reqId, 
           data: {
             username: 'joelsoderstrom', 
@@ -141,7 +141,7 @@ describe('Auth service', () => {
       });
 
       bus
-        .request('http.post.auth.login.app', { 
+        .request('http.post.auth.app', { 
           reqId: reqId, 
           data: {
             username: 'joelsoderstrom', 
@@ -185,7 +185,7 @@ describe('Auth service', () => {
       });
 
       bus
-        .request('http.post.auth.login.app', { 
+        .request('http.post.auth.app', { 
           reqId: reqId, 
           data: {
             username: 'joelsoderstrom', 
@@ -282,17 +282,18 @@ describe('Auth service', () => {
       });
 
       bus
-        .request('auth.refresh-access-token', { reqId: reqId, data: 'validToken' })
+        .request('http.post.auth.refresh', { reqId: reqId, data: 'validToken' })
         .then(resp => {          
           var decodedAccessToken = jwt.decode(resp.data);
           expect(decodedAccessToken.id).toBe('userId');          
           done();
-        });
+        })
+        .catch(done.fail);
     });
 
     it('should not get new access token from expired refresh token (expired by setting `expired=true`)', done => {
       bus
-        .request('auth.refresh-access-token', { data: 'expiredToken' })
+        .request('http.post.auth.refresh', { data: 'expiredToken' })
         .then(done.fail)
         .catch(resp => {        
           expect(resp.status).toBe(403);          
@@ -303,7 +304,7 @@ describe('Auth service', () => {
 
     it('should not get new access token from expired refresh token (expired by date)', done => {            
       bus
-        .request('auth.refresh-access-token', { data: 'expiredByDateToken' })
+        .request('http.post.auth.refresh', { data: 'expiredByDateToken' })
         .then(done.fail)
         .catch(resp => {
           expect(resp.status).toBe(403);          
