@@ -26,6 +26,9 @@ module.exports = {
   // How long JWT cookie will survive
   jwtCookieAge: process.env.JWT_COOKIE_AGE || '10d',
 
+  // How long access token is valid
+  accessTokenTTL: process.env.ACCESS_TOKEN_TTL || '1d',
+
   // How long a refresh token is valid
   refreshTokenTTL: process.env.REFRESH_TOKEN_TTL || '365d',
 

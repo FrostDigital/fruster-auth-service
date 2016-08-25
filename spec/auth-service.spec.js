@@ -87,6 +87,7 @@ describe('Auth service', () => {
           expect(decodedJWT.firstName).toBe('firstName');
           expect(decodedJWT.lastName).toBe('lastName');
           expect(decodedJWT.mail).toBe('mail');
+          expect(decodedJWT.exp).toBeDefined();
 
           done();
         })  
