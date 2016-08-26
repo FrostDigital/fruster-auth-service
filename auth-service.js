@@ -22,7 +22,7 @@ module.exports.start = function(busAddress, mongoUrl) {
       bus.subscribe('http.post.auth.web', req => login(req, true));
       bus.subscribe('http.post.auth.app', req => login(req, false));      
       bus.subscribe('http.post.auth.refresh', refreshAccessToken);      
-      bus.subscribe('auth-service.decode-access-token', decodeToken);      
+      bus.subscribe('auth-service.decode-token', decodeToken);      
     })
     .then(() => log.info('Auth service is up and running'));
 };
@@ -134,7 +134,7 @@ function login(req, isWeb) {
   }
   
   return bus
-    .request('user-service.validate-password', { reqId: req.reqId, data: login })    
+    .request('user-service.validate-password', { reqId: req.reqId, data: credentials })    
     .then(isWeb ? loginWeb : loginApp)
     .catch(handleAuthError);  
 }

@@ -54,8 +54,13 @@ describe('Auth service', () => {
 
     it('should login and return JWT as cookie', done => {              
       var reqId = 'a-req-id';
+      var username = 'joelsoderstrom';
+      var password = 'ZlatansPonyTail';
 
       bus.subscribe('user-service.validate-password', req => {
+        expect(req.data.username).toBe(username);
+        expect(req.data.password).toBe(password);
+
         return {
           status: 200,
           data: {
@@ -71,8 +76,8 @@ describe('Auth service', () => {
         .request('http.post.auth.web', { 
           reqId: reqId, 
           data: {
-            username: 'joelsoderstrom', 
-            password: 'ZlatansPonyTail'          
+            username: username, 
+            password: password          
           }
         })
         .then(resp => {
@@ -209,7 +214,7 @@ describe('Auth service', () => {
       var encodedToken = jwt.encode({foo: 'bar'});
 
       bus
-        .request('auth-service.decode-access-token', { reqId: reqId, data: encodedToken })
+        .request('auth-service.decode-token', { reqId: reqId, data: encodedToken })
         .then(resp => {
           expect(resp.data.foo).toBe('bar');
           expect(resp.reqId).toBe(reqId);
@@ -223,7 +228,7 @@ describe('Auth service', () => {
       var encodedToken = 'poop';
 
       bus
-        .request('auth-service.decode-access-token', { reqId: reqId, data: encodedToken })
+        .request('auth-service.decode-token', { reqId: reqId, data: encodedToken })
         .then(done.fail)
         .catch(err => {
           expect(err.status).toBe(403);

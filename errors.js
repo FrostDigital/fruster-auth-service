@@ -1,13 +1,14 @@
 const uuid = require('uuid');
+const serviceId = 'auth-service';
 
 const errorCode = {
-  invalidUsernameFormat: 4001,
-  invalidPasswordFormat: 4002,
-  invalidAccessToken: 4031,
-  refreshTokenExpired: 4201,
-  refrehTokenNotFound: 4041, 
-  missingRefreshToken: 4006,
-  unexpectedError: 5001
+  invalidUsernameFormat: serviceId + '.400.1',
+  invalidPasswordFormat: serviceId + '.400.2',
+  invalidAccessToken: serviceId + '.403.1',
+  refreshTokenExpired: serviceId + '420.1',
+  refrehTokenNotFound: serviceId + '404.1', 
+  missingRefreshToken: serviceId + '400.6',
+  unexpectedError: serviceId + '500.1'
 };
 
 module.exports = {
