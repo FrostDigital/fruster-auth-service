@@ -2,7 +2,7 @@ var log = require('./log');
 var authService = require('./auth-service');
 
 authService
-  .start(conf.bus)
+  .start(conf.bus, conf.mongoUrl)
   .then(function() {
     log.info('Auth service started and connected to bus', conf.bus);
   })

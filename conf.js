@@ -7,9 +7,6 @@ module.exports = {
   // Applications log level (error|warn|info|debug|silly)
   logLevel: parseLogLevel(process.env.LOG_LEVEL) || 'debug',
 
-  // Mongo database URL
-  database: process.env.DATABASE || 'localhost:4321',
-
   // Password min length
   passwordMinLength: process.env.PASSWORD_MIN_LENGTH || 6,
 
@@ -24,7 +21,18 @@ module.exports = {
   userAttrsWhitelist: parseArray(process.env.USER_ATTRS_WHITELIST) || ['id', 'firstName', 'lastName', 'mail'],
 
   // How long JWT cookie will survive
-  jwtCookieAge: process.env.JWT_COOKIE_AGE || '10d'
+  jwtCookieAge: process.env.JWT_COOKIE_AGE || '10d',
+
+  // How long access token is valid
+  accessTokenTTL: process.env.ACCESS_TOKEN_TTL || '1d',
+
+  // How long a refresh token is valid
+  refreshTokenTTL: process.env.REFRESH_TOKEN_TTL || '365d',
+
+  // Mongo database URL
+  mongoUrl: process.env.MONGO_URL || 'mongodb://localhost:27017',
+
+  refreshTokenCollection: 'refresh-tokens'
   
 };
 
