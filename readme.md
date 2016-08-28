@@ -17,7 +17,7 @@ Login for web applications. with `username` and `password` and return JWT in `Se
 
 #### Subject
     
-    http.post.auth.login.web
+    http.post.auth.web
 
 #### Request 
     
@@ -41,14 +41,13 @@ Login for web applications. with `username` and `password` and return JWT in `Se
 
 #### Failure response
 
-    {
-        "status": 401,
-        "error" {
-            "code": 401,
-            "title": "Unauthorized",
-            "detail": "Invalid username or password"
-        }
-    }
+* 401 Unauthorized
+* 403 Not allowed
+* 400 / 4001 Invalid password format
+* 400 / 4002 Invalid username format
+* 403 / 4002 Invalid access token
+* 500 / 5001 Unexpected error
+
 
 ## App login
 
@@ -81,20 +80,50 @@ Login for non web devices such as native mobile apps.
 
 #### Failure response:
 
+* 401 Unauthorized
+* 403 Not allowed
+* 400 / 4001 Invalid password format
+* 400 / 4002 Invalid username format
+* 500 / 5001 Unexpected error
+
+
+## Refresh access token
+
+Get fresh access token by providing a refresh token.
+
+#### Subject
+    
+    http.post.auth.refresh
+
+#### Request
+    
     {
-        "status": 401,
-        "error" {
-            "code": 401,
-            "title": "Unauthorized",
-            "detail": "Invalid username or password"
+        // ...
+        "data": "{refresh token}"
+    }
+
+#### Success response
+
+    {
+        // ...
+        "status": 200,
+        "data": {
+            "accessToken": "{jwt token}"
         }
     }
 
-### Decrypt JWT token
+#### Failure response:
+
+* 400 / 4006 Refresh token not provided
+* 404 / 4041 Refresh token not found
+* 420 / 4031 Refresh token expired
+
+
+### Decode JWT token
 
 #### Subject
 
-    auth.decrypt
+    auth.decode-access-token
 
 #### Request
 
@@ -115,26 +144,10 @@ Login for non web devices such as native mobile apps.
 
 #### Failure response
 
-If signing failed (which indicates that JWT has been tampered with):
+* 400 / 4006 Refresh token not provided
+* 404 / 4041 Refresh token not found
+* 420 / 4031 Refresh token expired
 
-    {
-        status: 400,
-        error: {
-            code: 400,
-            title: "Failed to sign JWT token"            
-        }
-    }
-
-If token has expired:
-
-    {
-        status: 420,
-        error: {
-            code: 420,
-            title: "JWT token has expired",
-            detail: "Token expired 23 min ago"            
-        }
-    }
 
 ## Run
 
@@ -157,24 +170,34 @@ During development `nodemon` is handy, it will watch and restart server when fil
 ## Configuration
 
 Configuration is set with environment variables. All config defaults to values that makes sense for development.
-  
+    
+    # Mongo database URL
+    MONGO_URL = "mongodb://localhost:27017"
+
     # Applications log level (error|warn|info|debug|silly)
     LOG_LEVEL = "debug"
     
     # NATS servers, set multiple if using cluster
     # Example: `"nats://10.23.45.1:4222,nats://10.23.41.8:4222"`
     BUS = "nats://localhost:4222"
-    
-    SESSION_TOKEN_TTL = "24h"
-
+        
+    # How long refresh token is valid
     REFRESH_TOKEN_TTL = "365d"
+    
+    # How long access token is valid
+    ACCESS_TOKEN_TTL = "1d"
 
     USER_SERVICE_SUBJECT = "user.get-user"
 
-    // JWT secret used to encode/decode tokens
+    # JWT secret used to encode/decode tokens
     JWT_SECRET = "fe1a1915a379f3be5394b64d14794932"
+    
+    # Access token cookie expiration (only used for web auth)
+    ACCESS_TOKEN_COOKIE_AGE = "10d",
 
-    // Attributes on user object to use in JWT token 
+    # Attributes on user object to use in JWT token 
     USER_ATTRS_WHITELIST = "id,firstName,lastName,mail"
+    
+
     
     
