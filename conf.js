@@ -18,7 +18,7 @@ module.exports = {
   secret: process.env.JWT_SECRET || 'fe1a1915a379f3be5394b64d14794932',
 
   // Attributes on user object to use in JWT token
-  userAttrsWhitelist: parseArray(process.env.USER_ATTRS_WHITELIST) || ['id', 'firstName', 'lastName', 'mail'],
+  userAttrsWhitelist: parseArray(process.env.USER_ATTRS_WHITELIST) || ['id', 'firstName', 'lastName', 'mail', 'scopes', 'roles'],
 
   // How long JWT cookie will survive
   jwtCookieAge: process.env.JWT_COOKIE_AGE || '10d',
