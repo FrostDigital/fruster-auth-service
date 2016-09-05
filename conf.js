@@ -1,14 +1,14 @@
 module.exports = {
-  
+
   // NATS servers, set multiple if using cluster
   // Example: `['nats://10.23.45.1:4222', 'nats://10.23.41.8:4222']`
   bus: parseArray(process.env.BUS) || ['nats://localhost:4222'],
 
   // Applications log level (error|warn|info|debug|silly)
-  logLevel: parseLogLevel(process.env.LOG_LEVEL) || 'debug',
+  logLevel: parseLogLevel(process.env.LOG_LEVEL) ||  'debug',
 
   // Password min length
-  passwordMinLength: process.env.PASSWORD_MIN_LENGTH || 6,
+  passwordMinLength: process.env.PASSWORD_MIN_LENGTH ||  6,
 
   // Username min lengtn
   // Does not apply if login in with email address
@@ -18,22 +18,22 @@ module.exports = {
   secret: process.env.JWT_SECRET || 'fe1a1915a379f3be5394b64d14794932',
 
   // Attributes on user object to use in JWT token
-  userAttrsWhitelist: parseArray(process.env.USER_ATTRS_WHITELIST) || ['id', 'firstName', 'lastName', 'mail', 'scopes', 'roles'],
+  userAttrsWhitelist: parseArray(process.env.USER_ATTRS_WHITELIST) || ['id', 'firstName', 'lastName', 'email', 'scopes', 'roles'],
 
   // How long JWT cookie will survive
-  jwtCookieAge: process.env.JWT_COOKIE_AGE || '10d',
+  jwtCookieAge: process.env.JWT_COOKIE_AGE ||  '10d',
 
   // How long access token is valid
-  accessTokenTTL: process.env.ACCESS_TOKEN_TTL || '1d',
+  accessTokenTTL: process.env.ACCESS_TOKEN_TTL ||  '1d',
 
   // How long a refresh token is valid
-  refreshTokenTTL: process.env.REFRESH_TOKEN_TTL || '365d',
+  refreshTokenTTL: process.env.REFRESH_TOKEN_TTL ||  '365d',
 
   // Mongo database URL
   mongoUrl: process.env.MONGO_URL || 'mongodb://localhost:27017',
 
   refreshTokenCollection: 'refresh-tokens'
-  
+
 };
 
 // function parseBool(str, defaultVal) {
@@ -41,15 +41,15 @@ module.exports = {
 // }
 
 function parseArray(str) {
-  if(str) {
+  if (str) {
     return str.split(',');
   }
   return null;
 }
 
 function parseLogLevel(str) {
-  if(str) {
+  if (str) {
     // align log level naming so trace -> silly (which is winston specific)
-    return str.toLowerCase() === 'trace' ? 'silly' : str;    
+    return str.toLowerCase() === 'trace' ? 'silly' : str;
   }
 }
