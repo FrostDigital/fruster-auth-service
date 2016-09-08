@@ -30,7 +30,7 @@ module.exports = {
   refreshTokenTTL: process.env.REFRESH_TOKEN_TTL ||  '365d',
 
   // Mongo database URL
-  mongoUrl: process.env.MONGO_URL || 'mongodb://localhost:27017',
+  mongoUrl: process.env.MONGO_URL || 'mongodb://localhost:27017/auth-service',
 
   refreshTokenCollection: 'refresh-tokens'
 
