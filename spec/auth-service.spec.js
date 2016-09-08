@@ -67,7 +67,7 @@ describe('Auth service', () => {
             'id': 'id',
             'firstName': 'firstName',
             'lastName': 'lastName',
-            'mail': 'mail'
+            'email': 'email'
           }
         };
       });
@@ -91,7 +91,7 @@ describe('Auth service', () => {
           expect(decodedJWT.id).toBe('id');
           expect(decodedJWT.firstName).toBe('firstName');
           expect(decodedJWT.lastName).toBe('lastName');
-          expect(decodedJWT.mail).toBe('mail');
+          expect(decodedJWT.email).toBe('email');
           expect(decodedJWT.exp).toBeDefined();
 
           done();
@@ -141,7 +141,7 @@ describe('Auth service', () => {
             'id': 'id',
             'firstName': 'firstName',
             'lastName': 'lastName',
-            'mail': 'mail'
+            'email': 'email'
           }
         };
       });
@@ -167,7 +167,7 @@ describe('Auth service', () => {
           expect(decodedJWT.id).toBe('id');
           expect(decodedJWT.firstName).toBe('firstName');
           expect(decodedJWT.lastName).toBe('lastName');
-          expect(decodedJWT.mail).toBe('mail');
+          expect(decodedJWT.email).toBe('email');
 
           return refreshTokenColl.findOne({token: resp.data.refreshToken}).then(function(token) {
             expect(token.userId).toBe('id');
