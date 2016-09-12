@@ -1,7 +1,7 @@
 'use strict';
 
 var conf = require('./conf');
-var log = require('./log');
+var log = require('fruster-log');
 var uuid = require('uuid');
 var _ = require('lodash');
 var bus = require('fruster-bus');
