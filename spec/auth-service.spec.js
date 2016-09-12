@@ -288,7 +288,12 @@ describe('Auth service', () => {
       });
 
       bus
-        .request('http.post.auth.refresh', { reqId: reqId, data: 'validToken' })
+        .request('http.post.auth.refresh', { 
+          reqId: reqId, 
+          data: { 
+            refreshToken: 'validToken' 
+          }
+        })
         .then(resp => {          
           var decodedAccessToken = jwt.decode(resp.data);
           expect(decodedAccessToken.id).toBe('userId');          
@@ -299,7 +304,11 @@ describe('Auth service', () => {
 
     it('should not get new access token from expired refresh token (expired by setting `expired=true`)', done => {
       bus
-        .request('http.post.auth.refresh', { data: 'expiredToken' })
+        .request('http.post.auth.refresh', { 
+          data: { 
+            refreshToken: 'expiredToken' 
+          }
+        })
         .then(done.fail)
         .catch(resp => {        
           expect(resp.status).toBe(420);          
@@ -310,7 +319,11 @@ describe('Auth service', () => {
 
     it('should not get new access token from expired refresh token (expired by date)', done => {            
       bus
-        .request('http.post.auth.refresh', { data: 'expiredByDateToken' })
+        .request('http.post.auth.refresh', { 
+          data: { 
+            refreshToken: 'expiredByDateToken' 
+          }
+        })
         .then(done.fail)
         .catch(resp => {
           expect(resp.status).toBe(420);          

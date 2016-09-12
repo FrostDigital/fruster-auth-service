@@ -51,7 +51,7 @@ function decodeToken(req) {
  * Will throw error if refresh token is missing, invalid or expired.
  */
 function refreshAccessToken(req) {
-  var refreshToken = req.data;
+  var refreshToken = req.data.refreshToken;
 
   if (!refreshToken) {
     return errors.missingRefreshToken();
