@@ -7,7 +7,7 @@ authService
   .then(function() {
     log.info('Auth service started and connected to bus', conf.bus);
   })
-  .error(function(err) {
+  .catch(function(err) {
     log.error('Failed starting auth service', err);
     process.exit(1);
   });

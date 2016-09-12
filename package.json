@@ -8,6 +8,7 @@
   },
   "dependencies": {
     "fruster-bus": "~0.0.7",
+    "fruster-log": "~0.0.1",
     "jwt-simple": "^0.5.0",
     "lodash": "^4.15.0",
     "mongodb-bluebird": "^0.1.1",
