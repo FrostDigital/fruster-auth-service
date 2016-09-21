@@ -1,14 +1,12 @@
-'use strict';
-
-var conf = require('./conf');
-var log = require('fruster-log');
-var uuid = require('uuid');
-var _ = require('lodash');
-var bus = require('fruster-bus');
-var jwt = require('./jwt');
-var ms = require('ms');
-var mongo = require('mongodb-bluebird');
-var errors = require('./errors');
+const conf = require('./conf');
+const log = require('fruster-log');
+const uuid = require('uuid');
+const _ = require('lodash');
+const bus = require('fruster-bus');
+const jwt = require('./jwt');
+const ms = require('ms');
+const mongo = require('mongodb-bluebird');
+const errors = require('./errors');
 
 var refreshTokensCollection;
 
