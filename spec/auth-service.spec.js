@@ -10,17 +10,13 @@ var nats = require('nats'),
     errors = require('../errors'),
     mongo = require('mongodb-bluebird');
 
-    //embeddedMongo = require('embedded-mongo-spec');
-
 describe('Auth service', () => {
   var natsServer;  
-  //var mongoPort = Math.floor(Math.random() * 6000 + 2000);
   var busPort, busAddress;
   var mongoUrl = 'mongodb://localhost:27017/auth-service-test';
   var db, refreshTokenColl;
 
   beforeAll(done => {
-    //embeddedMongo.open(mongoPort)
     mongo.connect(mongoUrl).then(oDb => {
       db = oDb;
       refreshTokenColl = db.collection(conf.refreshTokenCollection);
@@ -154,7 +150,7 @@ describe('Auth service', () => {
             password: 'ZlatansPonyTail'          
           }
         })
-        .then(function(resp) {
+        .then(function(resp) { 
           expect(resp.status).toBe(200);
           expect(resp.reqId).toBe(reqId);
           expect(resp.data.accessToken).toBeDefined();

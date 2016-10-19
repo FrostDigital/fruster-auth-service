@@ -60,6 +60,6 @@ function err(status, code, title, detail) {
     e.error.detail = detail;
   }
 
-  return e;
+  throw e;  
 }
 
