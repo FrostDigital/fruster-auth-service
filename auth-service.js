@@ -87,19 +87,20 @@ function login(req, isWeb) {
   var credentials = req.data;
 
   if (!isValidLength(credentials.username, conf.usernameMinLength)) {
-    return errors.invalidUsernameFormat(credentials.username);
+    errors.invalidUsernameFormat(credentials.username);
   }
 
   if (!isValidLength(credentials.password, conf.passwordMinLength)) {
-    return errors.invalidPasswordFormat();
+    errors.invalidPasswordFormat();
   }
+
 
   function handleAuthError(err) {
     log.debug('User service failed validating username/password', err.status);
 
     if (err.status !== 401 && err.status !== 403) {
       log.warn('Recieved unexpected error from user service', err);
-      return errors.unexpectedError(err.detail);
+      errors.unexpectedError(err.detail);
     }
 
     return err;
@@ -131,7 +132,10 @@ function login(req, isWeb) {
 
     return saveRefreshToken(refreshToken, whitelistedUser.id)
       .then(() => res)
-      .catch(errors.unexpectedError('Failed saving refresh token'));
+      .catch(err => {
+        log.error(err);
+        errors.unexpectedError('Failed saving refresh token')
+      });
   }
 
   return bus
