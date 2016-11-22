@@ -146,7 +146,7 @@ function loginApp(res) {
 }
 
 function generateJWTTokenForUser(req, isWeb) {
-  let userQuery = req.data.userQuery;
+  let userQuery = req.data;
 
   return bus.request(conf.userServiceGetUserSubject, {
       reqId: req.reqId,

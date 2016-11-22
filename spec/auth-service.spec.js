@@ -147,9 +147,7 @@ describe("Auth service", () => {
       bus.request("auth-service.generate-jwt-token-for-user.web", {
           reqId: "reqId",
           data: {
-            userQuery: {
-              firstName: "viktor"
-            }
+            firstName: "viktor"
           }
         })
         .then(resp => {
@@ -274,9 +272,7 @@ describe("Auth service", () => {
       bus.request("auth-service.generate-jwt-token-for-user.app", {
           reqId: "hello",
           data: {
-            userQuery: {
-              firstName: "viktor"
-            }
+            firstName: "viktor"
           }
         })
         .then(resp => {
