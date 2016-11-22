@@ -49,6 +49,26 @@ Login for web applications. with `username` and `password` and return JWT in `Se
 * 500 / 5001 Unexpected error
 
 
+### Generate web JWT token for user 
+
+Generates a web JWT token for a user matching the inputted Mongo query. Used for external logins. 
+
+#### Subject
+    
+    auth-service.generate-jwt-token-for-user.web
+
+#### Request 
+    
+Mongo query for the user to generate JWT token for.
+
+	{
+		"id": "be69d4d8-b2d4-4907-865d-b433d9373c29"
+	}
+
+#### Success response
+Same as [Web Login](https://github.com/FrostDigital/fruster-auth-service#web-login)
+
+
 ## App login
 
 Login for non web devices such as native mobile apps.
@@ -85,6 +105,25 @@ Login for non web devices such as native mobile apps.
 * 400 / 4001 Invalid password format
 * 400 / 4002 Invalid username format
 * 500 / 5001 Unexpected error
+
+### Generate app JWT token for user 
+
+Generates a web JWT token for a user matching the inputted Mongo query. Used for external logins. 
+
+#### Subject
+    
+    auth-service.generate-jwt-token-for-user.app
+
+#### Request 
+    
+Mongo query for the user to generate JWT token for.
+
+	{
+		"id": "be69d4d8-b2d4-4907-865d-b433d9373c29"
+	}
+
+#### Success response
+Same as [App Login](https://github.com/FrostDigital/fruster-auth-service#app-login)
 
 
 ## Refresh access token

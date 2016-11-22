@@ -21,6 +21,8 @@ module.exports.start = function (busAddress, mongoUrl)  {
       bus.subscribe('http.post.auth.app', req => login(req, false));
       bus.subscribe('http.post.auth.refresh', refreshAccessToken);
       bus.subscribe('auth-service.decode-token', decodeToken);
+      bus.subscribe('auth-service.generate-jwt-token-for-user.web', req => generateJWTTokenForUser(req, true));
+      bus.subscribe('auth-service.generate-jwt-token-for-user.app', req => generateJWTTokenForUser(req, false));
     })
     .then(() => log.info('Auth service is up and running'));
 };
@@ -105,35 +107,6 @@ function login(req, isWeb) {
     return err;
   }
 
-  function loginWeb(res) {
-    log.debug('Successfully authenticated user', credentials.username);
-
-    var whitelistedUser = getWhitelistedUser(res.data);
-
-    res.headers = {
-      'Set-Cookie': bakeCookie(jwt.encode(whitelistedUser), ms(conf.jwtCookieAge))
-    };
-
-    res.data = whitelistedUser;
-
-    return res;
-  }
-
-  function loginApp(res) {
-    var whitelistedUser = getWhitelistedUser(res.data);
-    var refreshToken = uuid.v4();
-
-    res.data = {
-      accessToken: jwt.encode(whitelistedUser),
-      refreshToken: refreshToken,
-      profile: whitelistedUser
-    };
-
-    return saveRefreshToken(refreshToken, whitelistedUser.id)
-      .then(() => res)
-      .catch(errors.unexpectedError('Failed saving refresh token'));
-  }
-
   return bus
     .request('user-service.validate-password', {
       reqId: req.reqId,
@@ -141,6 +114,49 @@ function login(req, isWeb) {
     })
     .then(isWeb ? loginWeb : loginApp)
     .catch(handleAuthError);
+}
+
+function loginWeb(res) {
+  log.debug('Successfully authenticated user', res.id);
+
+  var whitelistedUser = getWhitelistedUser(res.data);
+
+  res.headers = {
+    'Set-Cookie': bakeCookie(jwt.encode(whitelistedUser), ms(conf.jwtCookieAge))
+  };
+
+  res.data = whitelistedUser;
+
+  return res;
+}
+
+function loginApp(res) {
+  var whitelistedUser = getWhitelistedUser(res.data);
+  var refreshToken = uuid.v4();
+
+  res.data = {
+    accessToken: jwt.encode(whitelistedUser),
+    refreshToken: refreshToken,
+    profile: whitelistedUser
+  };
+
+  return saveRefreshToken(refreshToken, whitelistedUser.id)
+    .then(() => res)
+    .catch(errors.unexpectedError('Failed saving refresh token'));
+}
+
+function generateJWTTokenForUser(req, isWeb) {
+  let userQuery = req.data;
+
+  return bus.request(conf.userServiceGetUserSubject, {
+      reqId: req.reqId,
+      data: userQuery
+    })
+    .then(userResp => {
+      userResp.data = userResp.data[0];
+      return userResp;
+    })
+    .then(isWeb ? loginWeb : loginApp);
 }
 
 function saveRefreshToken(token, userId) {
