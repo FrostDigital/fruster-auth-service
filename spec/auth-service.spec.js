@@ -126,7 +126,7 @@ describe("Auth service", () => {
     });
 
     it("should generate web JWT token for user", done => {
-      bus.subscribe(conf.userServiceGetUserSubject, req => {
+      bus.subscribe(conf.userServiceGetUserSubject, () => {
         return {
           "status": 200,
           "data": [{
@@ -144,13 +144,12 @@ describe("Auth service", () => {
         };
       });
 
-      bus.request("auth-service.generate-jwt-token-for-user", {
+      bus.request("auth-service.generate-jwt-token-for-user.web", {
           reqId: "reqId",
           data: {
             userQuery: {
               firstName: "viktor"
-            },
-            isWeb: true
+            }
           }
         })
         .then(resp => {
@@ -253,7 +252,7 @@ describe("Auth service", () => {
     });
 
     it("should generate app JWT token for user", done => {
-      bus.subscribe(conf.userServiceGetUserSubject, req => {
+      bus.subscribe(conf.userServiceGetUserSubject, () => {
         return {
           "status": 200,
           "data": [{
@@ -272,13 +271,12 @@ describe("Auth service", () => {
       });
 
 
-      bus.request("auth-service.generate-jwt-token-for-user", {
+      bus.request("auth-service.generate-jwt-token-for-user.app", {
           reqId: "hello",
           data: {
             userQuery: {
               firstName: "viktor"
-            },
-            isWeb: false
+            }
           }
         })
         .then(resp => {

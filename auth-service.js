@@ -21,7 +21,8 @@ module.exports.start = function (busAddress, mongoUrl)  {
       bus.subscribe('http.post.auth.app', req => login(req, false));
       bus.subscribe('http.post.auth.refresh', refreshAccessToken);
       bus.subscribe('auth-service.decode-token', decodeToken);
-      bus.subscribe('auth-service.generate-jwt-token-for-user', generateJWTTokenForUser);
+      bus.subscribe('auth-service.generate-jwt-token-for-user.web', req => generateJWTTokenForUser(req, true));
+      bus.subscribe('auth-service.generate-jwt-token-for-user.app', req => generateJWTTokenForUser(req, false));
     })
     .then(() => log.info('Auth service is up and running'));
 };
@@ -144,9 +145,8 @@ function loginApp(res) {
     .catch(errors.unexpectedError('Failed saving refresh token'));
 }
 
-function generateJWTTokenForUser(req) {
+function generateJWTTokenForUser(req, isWeb) {
   let userQuery = req.data.userQuery;
-  let isWeb = req.data.isWeb !== undefined ? req.data.isWeb : true;
 
   return bus.request(conf.userServiceGetUserSubject, {
       reqId: req.reqId,
