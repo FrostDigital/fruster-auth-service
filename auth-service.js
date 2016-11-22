@@ -38,9 +38,9 @@ function decodeToken(req) {
     res = createResponse(200, {
       data: jwt.decode(req.data)
     });
-  } catch (ex) {
+  } catch (ex) {        
     log.debug('Failed to decode JWT');
-    res = errors.invalidAccessToken();
+    res = errors.invalidAccessToken(ex.message);
   }
 
   return res;
