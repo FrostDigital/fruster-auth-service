@@ -40,8 +40,8 @@ module.exports = {
     return err(400, errorCode.invalidUsernameFormat, 'Invalid username format', 'Invalid username: ' + username);
   },
 
-  invalidAccessToken: function() {
-    return err(403, errorCode.invalidAccessToken, 'Invalid JWT token');
+  invalidAccessToken: function(detail) {
+    return err(403, errorCode.invalidAccessToken, 'Invalid JWT token', detail);
   }
 
 };
