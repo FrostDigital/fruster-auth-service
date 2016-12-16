@@ -20,6 +20,9 @@ module.exports = {
   // How long JWT cookie will survive
   jwtCookieAge: process.env.JWT_COOKIE_AGE ||  "10d",
 
+  // Domain that JWT Cookie is valid for
+  jwtCookieDomain: process.env.JWT_COOKIE_DOMAIN || "localhost",
+
   // How long access token is valid
   accessTokenTTL: process.env.ACCESS_TOKEN_TTL ||  "1d",
 
