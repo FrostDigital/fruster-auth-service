@@ -230,6 +230,9 @@ Configuration is set with environment variables. All config defaults to values t
 
     # JWT secret used to encode/decode tokens
     JWT_SECRET = "fe1a1915a379f3be5394b64d14794932"
+        
+    # Domain for JWT cookie, use dot for wildcard, example ".frost.se"
+    JWT_COOKIE_DOMAIN = "localhost"
     
     # Access token cookie expiration (only used for web auth)
     ACCESS_TOKEN_COOKIE_AGE = "10d",
