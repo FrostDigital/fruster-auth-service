@@ -10,17 +10,14 @@ var nats = require("nats"),
   errors = require("../errors"),
   mongo = require("mongodb-bluebird");
 
-//embeddedMongo = require("embedded-mongo-spec");
 
 describe("Auth service", () => {
   var natsServer;
-  //var mongoPort = Math.floor(Math.random() * 6000 + 2000);
   var busPort, busAddress;
   var mongoUrl = "mongodb://localhost:27017/auth-service-test";
   var db, refreshTokenColl;
 
   beforeAll(done => {
-    //embeddedMongo.open(mongoPort)
     mongo.connect(mongoUrl).then(oDb => {
         db = oDb;
         refreshTokenColl = db.collection(conf.refreshTokenCollection);
@@ -48,8 +45,8 @@ describe("Auth service", () => {
     }
   });
 
-  afterAll(() => {
-    db.dropCollection(conf.refreshTokenCollection);
+  afterAll(done => {
+    db.dropDatabase().then(done);
   });
 
   describe("Web login", () => {
@@ -164,6 +161,52 @@ describe("Auth service", () => {
           expect(decodedJWT.email).toBe("email");
           expect(decodedJWT.exp).toBeDefined();
 
+          done();
+        });
+    });
+
+    it("should fail to generate web JWT token if user not found", done => {
+      bus.subscribe(conf.userServiceGetUserSubject, () => {
+        return {
+          "status": 200,
+          "data": [],
+          "error": {},
+          "reqId": "reqId"
+        };
+      });
+
+      bus.request("auth-service.generate-jwt-token-for-user.web", {
+          reqId: "reqId",
+          data: {
+            firstName: "does not exist"
+          }
+        })
+        .catch(resp => {
+          expect(resp.status).toBe(404);          
+          expect(resp.error.code).toBe(errors.code.userNotFound);      
+          done();
+        });
+    });
+
+    it("should fail to generate web JWT token if multiple users found", done => {
+      bus.subscribe(conf.userServiceGetUserSubject, () => {
+        return {
+          "status": 200,
+          "data": [{ firstName: "fakeUser1" }, { firstName: "fakeUser2" }],
+          "error": {},
+          "reqId": "reqId"
+        };
+      });
+
+      bus.request("auth-service.generate-jwt-token-for-user.web", {
+          reqId: "reqId",
+          data: {
+            firstName: "does not exist"
+          }
+        })
+        .catch(resp => {
+          expect(resp.status).toBe(500);          
+          expect(resp.error.code).toBe(errors.code.unexpectedError);      
           done();
         });
     });
@@ -404,12 +447,12 @@ describe("Auth service", () => {
       bus.subscribe("user-service.get", req => {
         return {
           status: 200,
-          data: {
+          data: [{
             "id": "userId",
             "firstName": "firstName",
             "lastName": "lastName",
             "mail": "mail"
-          }
+          }]
         };
       });
 
@@ -424,7 +467,10 @@ describe("Auth service", () => {
           expect(decodedAccessToken.id).toBe("userId");
           done();
         })
-        .catch(done.fail);
+        .catch(err => {
+          console.log(err);
+          done.fail();
+        });
     });
 
     it("should not get new access token from expired refresh token (expired by setting `expired=true`)", done => {
