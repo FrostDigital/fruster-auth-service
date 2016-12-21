@@ -82,6 +82,7 @@ describe("Auth service", () => {
           expect(resp.status).toBe(200);
           expect(resp.reqId).toBe(reqId);
           expect(resp.headers["Set-Cookie"]).toBeDefined();
+          expect(resp.headers["Set-Cookie"]).not.toMatch("domain");
 
           var jwtCookie = cookie.parse(resp.headers["Set-Cookie"]).jwt;
           var decodedJWT = jwt.decode(jwtCookie);

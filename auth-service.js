@@ -182,7 +182,7 @@ function saveRefreshToken(token, userId) {
 function bakeCookie(jwt, expiresInMs) {
   var d = new Date();
   d.setTime(d.getTime() + expiresInMs);
-  return 'jwt=' + jwt + ';path=/;expires=' + d.toGMTString() + ';HttpOnly;domain=' + conf.jwtCookieDomain + ';';
+  return `jwt=${jwt};path=/;expires=${d.toGMTString()};HttpOnly;${conf.jwtCookieDomain ? "domain=" + conf.jwtCookieDomain + ";": ""}`;
 }
 
 function isValidLength(str, minLength) {
