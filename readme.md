@@ -226,7 +226,7 @@ Configuration is set with environment variables. All config defaults to values t
     # How long access token is valid
     ACCESS_TOKEN_TTL = "1d"
 
-    USER_SERVICE_SUBJECT = "user.get-user"
+    USER_SERVICE_GET_USER_SUBJECT = "user-service.get-user"
 
     # JWT secret used to encode/decode tokens
     JWT_SECRET = "fe1a1915a379f3be5394b64d14794932"
