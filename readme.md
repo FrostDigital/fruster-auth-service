@@ -238,7 +238,7 @@ Configuration is set with environment variables. All config defaults to values t
     ACCESS_TOKEN_COOKIE_AGE = "10d",
 
     # Attributes on user object to use in JWT token 
-    USER_ATTRS_WHITELIST = "id,firstName,lastName,mail"
+    USER_ATTRS_WHITELIST = "id,firstName,lastName,email,scopes,roles"
     
 
     
