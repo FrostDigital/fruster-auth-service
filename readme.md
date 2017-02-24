@@ -234,6 +234,9 @@ Configuration is set with environment variables. All config defaults to values t
     # Domain for JWT cookie, use dot for wildcard, example ".frost.se"
     JWT_COOKIE_DOMAIN = "localhost"
     
+    # If JWT cookie should be HTTP only. This should only be disabled during test!
+    JWT_COOKIE_HTTP_ONLY = "true"
+
     # Access token cookie expiration (only used for web auth)
     ACCESS_TOKEN_COOKIE_AGE = "10d",
 
