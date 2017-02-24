@@ -23,45 +23,6 @@ describe("Auth service", () => {
     }
   });
 
-// =======
-//   var natsServer;
-//   var busPort, busAddress;
-//   var mongoUrl = "mongodb://localhost:27017/auth-service-test";
-//   var db, refreshTokenColl;
-
-//   beforeAll(done => {
-//     mongo.connect(mongoUrl).then(oDb => {
-//         db = oDb;
-//         refreshTokenColl = db.collection(conf.refreshTokenCollection);
-//         done();
-//       })
-//       .catch(done.fail);
-//   });
-
-//   beforeEach(done => {
-//     busPort = Math.floor(Math.random() * 6000 + 2000);
-//     busAddress = "nats://localhost:" + busPort;
-
-//     nsc.startServer(busPort)
-//       .then(oServer => {
-//         natsServer = oServer;
-//       })
-//       .then(x => authService.start([busAddress], mongoUrl))
-//       .then(done)
-//       .catch(done.fail);
-//   });
-
-//   afterEach(() => {
-//     if (natsServer) {
-//       natsServer.kill();
-//     }
-//   });
-
-//   afterAll(done => {
-//     db.dropDatabase().then(done);
-//   });
-
-// >>>>>>> develop
   describe("Web login", () => {
 
     it("should login and return JWT as cookie", done => {
