@@ -1,6 +1,4 @@
-var nats = require("nats"),
-  nsc = require("nats-server-control"),
-  bus = require("fruster-bus"),
+const bus = require("fruster-bus"),
   cookie = require("cookie"),
   log = require("fruster-log"),
   jwt = require("../jwt"),
@@ -8,48 +6,21 @@ var nats = require("nats"),
   conf = require("../conf"),
   uuid = require("uuid"),
   errors = require("../errors"),
-  mongo = require("mongodb-bluebird");
+  mongo = require("mongodb-bluebird"),
+  testUtils = require("fruster-test-utils");
 
-//embeddedMongo = require("embedded-mongo-spec");
 
 describe("Auth service", () => {
-  var natsServer;
-  //var mongoPort = Math.floor(Math.random() * 6000 + 2000);
-  var busPort, busAddress;
-  var mongoUrl = "mongodb://localhost:27017/auth-service-test";
-  var db, refreshTokenColl;
+  let refreshTokenColl;
 
-  beforeAll(done => {
-    //embeddedMongo.open(mongoPort)
-    mongo.connect(mongoUrl).then(oDb => {
-        db = oDb;
-        refreshTokenColl = db.collection(conf.refreshTokenCollection);
-        done();
-      })
-      .catch(done.fail);
-  });
-
-  beforeEach(done => {
-    busPort = Math.floor(Math.random() * 6000 + 2000);
-    busAddress = "nats://localhost:" + busPort;
-
-    nsc.startServer(busPort)
-      .then(oServer => {
-        natsServer = oServer;
-      })
-      .then(x => authService.start([busAddress], mongoUrl))
-      .then(done)
-      .catch(done.fail);
-  });
-
-  afterEach(() => {
-    if (natsServer) {
-      natsServer.kill();
+  testUtils.startBeforeEach({
+    mongoUrl: "mongodb://localhost:27017/auth-service-test",
+    service: authService,
+    bus: bus,
+    afterStart: (connection) => {
+      refreshTokenColl = connection.db.collection(conf.refreshTokenCollection);
+      return Promise.resolve();
     }
-  });
-
-  afterAll(() => {
-    db.dropCollection(conf.refreshTokenCollection);
   });
 
   describe("Web login", () => {
@@ -174,6 +145,7 @@ describe("Auth service", () => {
   describe("App login", () => {
 
     it("should login and return access and refreshtoken in body", done => {
+      const now = Date.now();
       var reqId = "a-req-id";
 
       bus.subscribe("user-service.validate-password", req => {
@@ -215,7 +187,7 @@ describe("Auth service", () => {
             token: resp.data.refreshToken
           }).then(function (token) {
             expect(token.userId).toBe("id");
-            expect(token.expires).toBeDefined();
+            expect(token.expires.getTime()).not.toBeLessThan(now);
             expect(token.expired).toBe(false);
 
             done();
@@ -370,32 +342,33 @@ describe("Auth service", () => {
 
   describe("Refresh tokens", () => {
 
-    beforeAll(done => {
+    beforeEach(done => {
 
       var refreshTokens = [{
         _id: uuid.v4(),
         userId: "userId",
         token: "validToken",
         expired: false,
-        expires: new Date(new Date().getTime() + 1000 * 60)
+        expires: new Date(Date.now() + 1000 * 60)
       }, {
         _id: uuid.v4(),
         userId: "userId",
         token: "expiredByDateToken",
         expired: false,
-        expires: new Date(new Date().getTime() - 1000) // <-- expired by date
+        expires: new Date(Date.now() - 1000) // <-- expired by date
       }, {
         _id: uuid.v4(),
         userId: "userId",
         token: "expiredToken",
         expired: true, // <-- explicitly expired
-        expires: new Date(new Date().getTime() + 1000 * 60)
+        expires: new Date(Date.now() + 1000 * 60)
       }];
 
       Promise.all(refreshTokens.map(o => refreshTokenColl.insert(o))).then(done);
     });
 
     it("should get new access token from refresh token", done => {
+
       var reqId = "a-req-id";
       var encodedToken = jwt.encode({
         foo: "bar"
@@ -424,7 +397,10 @@ describe("Auth service", () => {
           expect(decodedAccessToken.id).toBe("userId");
           done();
         })
-        .catch(done.fail);
+        .catch(err => {
+          console.log(err);
+          done.fail();
+        });
     });
 
     it("should not get new access token from expired refresh token (expired by setting `expired=true`)", done => {

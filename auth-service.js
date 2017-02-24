@@ -10,11 +10,15 @@ const errors = require('./errors');
 
 var refreshTokensCollection;
 
-module.exports.start = function (busAddress, mongoUrl)  {
+module.exports.start = function (busAddress, mongoUrl) {
   return bus.connect(busAddress)
     .then(() => mongo.connect(mongoUrl))
     .then(db => {
+
       refreshTokensCollection = db.collection(conf.refreshTokenCollection);
+      
+      refreshTokensCollection.ensureIndex({_id: 1, });
+      refreshTokensCollection.ensureIndex({token: 1, });
     })
     .then(() =>  {
       bus.subscribe('http.post.auth.web', req => login(req, true));
@@ -68,12 +72,12 @@ function refreshAccessToken(req) {
     }));
 }
 
-function validateRefreshToken(token) {
+function validateRefreshToken(token) {  
   var err;
 
   if (!token) {
     err = errors.refreshTokenNotFound();
-  } else if (token.expired || token.expires.getTime() < new Date().getTime()) {
+  } else if (token.expired || token.expires.getTime() < new Date().getTime()) {    
     err = errors.refreshTokenExpired(token);
   }
 
@@ -165,7 +169,7 @@ function saveRefreshToken(token, userId) {
     token: token,
     userId: userId,
     expired: false,
-    expires: new Date(new Date().getTime() + conf.refreshTokenTTL)
+    expires: new Date(new Date().getTime() + ms(conf.refreshTokenTTL))
   });
 }
 
