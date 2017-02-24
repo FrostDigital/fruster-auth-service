@@ -7,7 +7,7 @@
     "test": "node ./spec/support/jasmine-runner.js"
   },
   "dependencies": {
-    "fruster-bus": "~0.0.17",
+    "fruster-bus": "0.1.10",
     "fruster-health": "0.0.6",
     "fruster-log": "~0.0.7",
     "jwt-simple": "^0.5.0",
@@ -21,6 +21,7 @@
   "devDependencies": {
     "cookie": "^0.3.1",
     "embedded-mongo-spec": "0.0.13",
+    "fruster-test-utils": "^0.3.3",
     "jasmine": "^2.5.2",
     "jasmine-spec-reporter": "^2.7.0",
     "nats-server-control": "0.0.1"
