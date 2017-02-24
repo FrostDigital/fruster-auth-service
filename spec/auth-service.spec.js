@@ -57,6 +57,7 @@ describe("Auth service", () => {
           expect(resp.reqId).toBe(reqId);
           expect(resp.headers["Set-Cookie"]).toBeDefined();
           expect(resp.headers["Set-Cookie"]).not.toMatch("domain");
+          expect(resp.headers["Set-Cookie"]).toMatch("HttpOnly;");
 
           var jwtCookie = cookie.parse(resp.headers["Set-Cookie"]).jwt;
           var decodedJWT = jwt.decode(jwtCookie);
@@ -67,6 +68,40 @@ describe("Auth service", () => {
           expect(decodedJWT.email).toBe("email");
           expect(decodedJWT.exp).toBeDefined();
 
+          done();
+        })
+        .catch(done.fail);
+    });
+
+    it("should login and return a non HttpOnly JWT as cookie", done => {
+      conf.jwtCookieHttpOnly = false;
+
+      var reqId = "a-req-id";
+      var username = "joelsoderstrom";
+      var password = "ZlatansPonyTail";
+
+      bus.subscribe("user-service.validate-password", req => {        
+        return {
+          status: 200,
+          data: {
+            "id": "id",
+            "firstName": "firstName",
+            "lastName": "lastName",
+            "email": "email"
+          }
+        };
+      });
+
+      bus.request("http.post.auth.web", {
+          reqId: reqId,
+          data: {
+            username: username,
+            password: password
+          }
+        })
+        .then(resp => {
+          expect(resp.headers["Set-Cookie"]).not.toMatch("HttpOnly;");          
+          conf.jwtCookieHttpOnly = true;
           done();
         })
         .catch(done.fail);

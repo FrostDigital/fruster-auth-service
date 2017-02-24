@@ -23,6 +23,9 @@ module.exports = {
   // Domain that JWT Cookie is valid for
   jwtCookieDomain: process.env.JWT_COOKIE_DOMAIN || null,
 
+  // If JWT cookie should be HTTP only. This should only be disabled during test
+  jwtCookieHttpOnly: (process.env.JWT_COOKIE_HTTP_ONLY || "true") == "true",
+
   // How long access token is valid
   accessTokenTTL: process.env.ACCESS_TOKEN_TTL ||  "1d",
 
