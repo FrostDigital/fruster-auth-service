@@ -456,16 +456,17 @@ describe("Auth service", () => {
         foo: "bar"
       });
 
-      bus.subscribe(conf.userServiceGetUserSubject, req => {
-        return {
-          status: 200,
-          data: [{
-            "id": "userId",
-            "firstName": "firstName",
-            "lastName": "lastName",
-            "mail": "mail"
-          }]
-        };
+      testUtils.mockService({
+        subject: conf.userServiceGetUserSubject,
+        data: [{
+          "id": "userId",
+          "firstName": "firstName",
+          "lastName": "lastName",
+          "mail": "mail"          
+        }],
+        expectRequestData: {
+          id: "userId"
+        }
       });
 
       bus.request("http.post.auth.refresh", {

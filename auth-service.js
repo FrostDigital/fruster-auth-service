@@ -66,7 +66,7 @@ function refreshAccessToken(req) {
       token: refreshToken
     })
     .then(validateRefreshToken)
-    .then(userId => createNewAccessToken(userId))
+    .then(userId => createNewAccessToken(userId, req.reqId))
     .then(accessToken => createResponse(200, {
       data: accessToken
     }));
@@ -225,10 +225,13 @@ function getWhitelistedUser(user) {
   return oUser;
 }
 
-function createNewAccessToken(userId) {
+function createNewAccessToken(userId, reqId) {  
   return bus
     .request(conf.userServiceGetUserSubject, {
-      id: userId
+      reqId: reqId,
+      data: {
+        id: userId        
+      }
     })
     .then(userResp => {
       return jwt.encode(getWhitelistedUser(userResp.data));
