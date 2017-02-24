@@ -5,10 +5,11 @@ const errorCode = {
   invalidUsernameFormat: serviceId + '.400.1',
   invalidPasswordFormat: serviceId + '.400.2',
   invalidAccessToken: serviceId + '.403.1',
-  refreshTokenExpired: serviceId + '420.1',
-  refrehTokenNotFound: serviceId + '404.1', 
-  missingRefreshToken: serviceId + '400.6',
-  unexpectedError: serviceId + '500.1'
+  refreshTokenExpired: serviceId + '.420.1',
+  refrehTokenNotFound: serviceId + '.404.1', 
+  userNotFound: serviceId + '.404.2',
+  missingRefreshToken: serviceId + '.400.6',
+  unexpectedError: serviceId + '.500.1'
 };
 
 module.exports = {
@@ -42,6 +43,10 @@ module.exports = {
 
   invalidAccessToken: function(detail) {
     return err(403, errorCode.invalidAccessToken, 'Invalid JWT token', detail);
+  },
+
+  userNotFound: function(detail) {
+    return err(404, errorCode.userNotFound, 'User not found', detail);
   }
 
 };

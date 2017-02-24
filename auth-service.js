@@ -72,8 +72,9 @@ function refreshAccessToken(req) {
     }));
 }
 
-function validateRefreshToken(token) {  
-  var err;
+
+function validateRefreshToken(token) {
+  var err;  
 
   if (!token) {
     err = errors.refreshTokenNotFound();
@@ -157,7 +158,16 @@ function generateJWTTokenForUser(req, isWeb) {
       data: userQuery
     })
     .then(userResp => {
+      if(userResp.data.length == 0) {
+        throw errors.userNotFound(`Cannot create JWT token - user not found ${JSON.stringify(req.data)}`);
+      }
+      
+      else if(userResp.data.length > 1) {
+        throw errors.unexpectedError(`Cannot create JWT token - user not found ${JSON.stringify(req.data)}`);        
+      }
+
       userResp.data = userResp.data[0];
+
       return userResp;
     })
     .then(isWeb ? loginWeb : loginApp);
@@ -177,7 +187,7 @@ function saveRefreshToken(token, userId) {
 function bakeCookie(jwt, expiresInMs) {
   var d = new Date();
   d.setTime(d.getTime() + expiresInMs);
-  return 'jwt=' + jwt + ';path=/;expires=' + d.toGMTString() + ';HttpOnly;domain=' + conf.jwtCookieDomain + ';';
+  return `jwt=${jwt};path=/;expires=${d.toGMTString()};HttpOnly;${conf.jwtCookieDomain ? "domain=" + conf.jwtCookieDomain + ";": ""}`;
 }
 
 function isValidLength(str, minLength) {
@@ -191,6 +201,11 @@ function createResponse(status, msg)  {
 }
 
 function getWhitelistedUser(user) {
+  if(Array.isArray(user)) {
+    // User may come as array or object, make sure to handle both cases
+    user = user[0];
+  }
+
   var oUser = {};
 
   _.each(conf.userAttrsWhitelist, function (attr)  {
