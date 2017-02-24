@@ -227,7 +227,7 @@ function getWhitelistedUser(user) {
 
 function createNewAccessToken(userId) {
   return bus
-    .request('user-service.get', {
+    .request(conf.userServiceGetUserSubject, {
       id: userId
     })
     .then(userResp => {
