@@ -476,7 +476,7 @@ describe("Auth service", () => {
           }
         })
         .then(resp => {
-          var decodedAccessToken = jwt.decode(resp.data);
+          var decodedAccessToken = jwt.decode(resp.data.accessToken);
           expect(decodedAccessToken.id).toBe("userId");
           done();
         })

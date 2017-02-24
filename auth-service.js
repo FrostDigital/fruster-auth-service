@@ -67,8 +67,10 @@ function refreshAccessToken(req) {
     })
     .then(validateRefreshToken)
     .then(userId => createNewAccessToken(userId, req.reqId))
-    .then(accessToken => createResponse(200, {
-      data: accessToken
+    .then(accessToken => createResponse(200, {      
+      data: {
+        accessToken: accessToken
+      }
     }));
 }
 
