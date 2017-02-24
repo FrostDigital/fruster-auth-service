@@ -456,7 +456,7 @@ describe("Auth service", () => {
         foo: "bar"
       });
 
-      bus.subscribe("user-service.get", req => {
+      bus.subscribe(conf.userServiceGetUserSubject, req => {
         return {
           status: 200,
           data: [{
