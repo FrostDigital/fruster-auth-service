@@ -1,241 +1,40 @@
-const conf = require('./conf');
-const log = require('fruster-log');
-const uuid = require('uuid');
-const _ = require('lodash');
-const bus = require('fruster-bus');
-const jwt = require('./jwt');
-const ms = require('ms');
-const mongo = require('mongodb-bluebird');
-const errors = require('./errors');
+const log = require("fruster-log");
+const bus = require("fruster-bus");
+const mongo = require("mongodb");
+const RefreshTokenRepo = require("./lib/repos/RefreshTokenRepo");
 
-var refreshTokensCollection;
+const CookieLogin = require("./lib/CookieLogin");
+const TokenLogin = require("./lib/TokenLogin");
+const Logout = require("./lib/Logout");
+const Refresh = require("./lib/Refresh");
+const DecodeToken = require("./lib/DecodeToken");
+const GenerateJWTToken = require("./lib/GenerateJWTToken");
 
-module.exports.start = function (busAddress, mongoUrl) {
-  return bus.connect(busAddress)
-    .then(() => mongo.connect(mongoUrl))
-    .then(db => {
+module.exports.start = function(busAddress, mongoUrl)  {
+	return bus.connect(busAddress)
+		.then(() => mongo.connect(mongoUrl))
+		.then((db) =>  {
+			let refreshTokenRepo = new RefreshTokenRepo(db);
+			let logout = new Logout();
+			let cookieLogin = new CookieLogin();
+			let tokenLogin = new TokenLogin(refreshTokenRepo);
+			let refresh = new Refresh(refreshTokenRepo);
+			let generateJWTToken = new GenerateJWTToken(tokenLogin, cookieLogin);
+			let decodeToken = new DecodeToken();
 
-      refreshTokensCollection = db.collection(conf.refreshTokenCollection);
-      
-      refreshTokensCollection.ensureIndex({_id: 1, });
-      refreshTokensCollection.ensureIndex({token: 1, });
-    })
-    .then(() =>  {
-      bus.subscribe('http.post.auth.web', req => login(req, true));
-      bus.subscribe('http.post.auth.app', req => login(req, false));
-      bus.subscribe('http.post.auth.refresh', refreshAccessToken);
-      bus.subscribe('auth-service.decode-token', decodeToken);
-      bus.subscribe('auth-service.generate-jwt-token-for-user.web', req => generateJWTTokenForUser(req, true));
-      bus.subscribe('auth-service.generate-jwt-token-for-user.app', req => generateJWTTokenForUser(req, false));
-    })
-    .then(() => log.info('Auth service is up and running'));
+			bus.subscribe("http.post.auth.cookie", req => cookieLogin.handle(req));
+			bus.subscribe("http.post.auth.token", req => tokenLogin.handle(req));
+			bus.subscribe( /* deprecated */ "http.post.auth.web", req => cookieLogin.handle(req));
+			bus.subscribe( /* deprecated */ "http.post.auth.app", req => tokenLogin.handle(req));
+			bus.subscribe("http.post.auth.refresh", req => refresh.handle(req));
+			bus.subscribe("auth-service.decode-token", req => decodeToken.handle(req));
+			bus.subscribe("auth-service.generate-jwt-token-for-user.cookie", req => generateJWTToken.handle(req, true));
+			bus.subscribe("auth-service.generate-jwt-token-for-user.token", req => generateJWTToken.handle(req, false));
+			bus.subscribe( /* deprecated */ "auth-service.generate-jwt-token-for-user.web", req => generateJWTToken.handle(req, true));
+			bus.subscribe( /* deprecated */ "auth-service.generate-jwt-token-for-user.app", req => generateJWTToken.handle(req, false));
+
+			bus.subscribe("http.post.auth.logout", req => logout.handle(req));
+		})
+		.then(() => log.info("Auth service is up and running"));
 };
 
-/**
- * Decodes JWT token in req.data into JSON.
- * Throws error `invalidAccessToken` if token could not be decoded. 
- */
-function decodeToken(req) {
-  var res;
-
-  try {
-    res = createResponse(200, {
-      data: jwt.decode(req.data)
-    });
-  } catch (ex) {        
-    log.debug('Failed to decode JWT');
-    res = errors.invalidAccessToken(ex.message);
-  }
-
-  return res;
-}
-
-/**
- * Returns a new access token from given refresh token.
- * Will throw error if refresh token is missing, invalid or expired.
- */
-function refreshAccessToken(req) {
-  var refreshToken = req.data.refreshToken;
-
-  if (!refreshToken) {
-    return errors.missingRefreshToken();
-  }
-
-  return refreshTokensCollection
-    .findOne({
-      token: refreshToken
-    })
-    .then(validateRefreshToken)
-    .then(userId => createNewAccessToken(userId, req.reqId))
-    .then(accessToken => createResponse(200, {      
-      data: {
-        accessToken: accessToken
-      }
-    }));
-}
-
-
-function validateRefreshToken(token) {
-  var err;  
-
-  if (!token) {
-    err = errors.refreshTokenNotFound();
-  } else if (token.expired || token.expires.getTime() < new Date().getTime()) {    
-    err = errors.refreshTokenExpired(token);
-  }
-
-  if (err) {
-    log.debug(err.error.detail);
-    throw err;
-  }
-
-  return token.userId;
-}
-
-function login(req, isWeb) {
-  var credentials = req.data;
-
-  if (!isValidLength(credentials.username, conf.usernameMinLength)) {
-    return errors.invalidUsernameFormat(credentials.username);
-  }
-
-  if (!isValidLength(credentials.password, conf.passwordMinLength)) {
-    return errors.invalidPasswordFormat();
-  }
-
-  function handleAuthError(err) {
-    log.debug('User service failed validating username/password', err.status);
-
-    if (err.status !== 401 && err.status !== 403) {
-      log.warn('Recieved unexpected error from user service', err);
-      return errors.unexpectedError(err.detail);
-    }
-
-    return err;
-  }
-
-  return bus
-    .request('user-service.validate-password', {
-      reqId: req.reqId,
-      data: credentials
-    })
-    .then(isWeb ? loginWeb : loginApp)
-    .catch(handleAuthError);
-}
-
-function loginWeb(res) {
-  log.debug('Successfully authenticated user', res.id);
-
-  var whitelistedUser = getWhitelistedUser(res.data);
-
-  res.headers = {
-    'Set-Cookie': bakeCookie(jwt.encode(whitelistedUser), ms(conf.jwtCookieAge))
-  };
-
-  res.data = whitelistedUser;
-
-  return res;
-}
-
-function loginApp(res) {
-  var whitelistedUser = getWhitelistedUser(res.data);
-  var refreshToken = uuid.v4();
-
-  res.data = {
-    accessToken: jwt.encode(whitelistedUser),
-    refreshToken: refreshToken,
-    profile: whitelistedUser
-  };
-
-  return saveRefreshToken(refreshToken, whitelistedUser.id)
-    .then(() => res)
-    .catch(errors.unexpectedError('Failed saving refresh token'));
-}
-
-function generateJWTTokenForUser(req, isWeb) {
-  let userQuery = req.data;
-
-  return bus.request(conf.userServiceGetUserSubject, {
-      reqId: req.reqId,
-      data: userQuery
-    })
-    .then(userResp => {
-      if(userResp.data.length == 0) {
-        throw errors.userNotFound(`Cannot create JWT token - user not found ${JSON.stringify(req.data)}`);
-      }
-      
-      else if(userResp.data.length > 1) {
-        throw errors.unexpectedError(`Cannot create JWT token - user not found ${JSON.stringify(req.data)}`);        
-      }
-
-      userResp.data = userResp.data[0];
-
-      return userResp;
-    })
-    .then(isWeb ? loginWeb : loginApp);
-}
-
-function saveRefreshToken(token, userId) {
-  return refreshTokensCollection.insert({
-    _id: uuid.v4(),
-    token: token,
-    userId: userId,
-    expired: false,
-    expires: new Date(new Date().getTime() + ms(conf.refreshTokenTTL))
-  });
-}
-
-
-function bakeCookie(jwt, expiresInMs) {
-  var d = new Date();
-  d.setTime(d.getTime() + expiresInMs);
-  return `jwt=${jwt};path=/;expires=${d.toGMTString()};${conf.jwtCookieHttpOnly ? "HttpOnly;" : ""}${conf.jwtCookieDomain ? "domain=" + conf.jwtCookieDomain + ";": ""}`;
-}
-
-function isValidLength(str, minLength) {
-  return str && str.length >= minLength;
-}
-
-function createResponse(status, msg)  {
-  return _.extend({}, msg, {
-    status: status
-  });
-}
-
-function getWhitelistedUser(user) {
-  if(Array.isArray(user)) {
-    // User may come as array or object, make sure to handle both cases
-    user = user[0];
-  }
-
-  var oUser = {};
-
-  _.each(conf.userAttrsWhitelist, function (attr)  {
-    if (_.has(user, attr)) {
-      oUser[attr] = user[attr];
-    } else {
-      log.warn('Unmatched whitelisted attribute', attr);
-    }
-  });
-
-  // safety net
-  if (oUser.password) {
-    log.warn('Password is not allowed in JWT token - removing it!');
-    delete oUser.password;
-  }
-
-  return oUser;
-}
-
-function createNewAccessToken(userId, reqId) {  
-  return bus
-    .request(conf.userServiceGetUserSubject, {
-      reqId: reqId,
-      data: {
-        id: userId        
-      }
-    })
-    .then(userResp => {
-      return jwt.encode(getWhitelistedUser(userResp.data));
-    });
-}

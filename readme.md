@@ -17,7 +17,7 @@ Login for web applications. with `username` and `password` and return JWT in `Se
 
 #### Subject
     
-    http.post.auth.web
+    http.post.auth.cookie
 
 #### Request 
     
@@ -55,7 +55,7 @@ Generates a web JWT token for a user matching the inputted Mongo query. Used for
 
 #### Subject
     
-    auth-service.generate-jwt-token-for-user.web
+    auth-service.generate-jwt-token-for-user.cookie
 
 #### Request 
     
@@ -75,7 +75,7 @@ Login for non web devices such as native mobile apps.
 
 #### Subject
     
-    http.post.auth.app
+    http.post.auth.token
 
 #### Request
     
@@ -112,7 +112,7 @@ Generates a web JWT token for a user matching the inputted Mongo query. Used for
 
 #### Subject
     
-    auth-service.generate-jwt-token-for-user.app
+    auth-service.generate-jwt-token-for-user.token
 
 #### Request 
     
@@ -186,6 +186,16 @@ Get fresh access token by providing a refresh token.
 * 400 / 4006 Refresh token not provided
 * 404 / 4041 Refresh token not found
 * 420 / 4031 Refresh token expired
+
+
+### Logout
+
+Will return a Set-Cookie to instruct browser to expire any existing cookie.
+In future this might remove accesstokens as well when they are saved in database.
+
+#### Subject
+    
+    http.post.auth.logout
 
 
 ## Run
