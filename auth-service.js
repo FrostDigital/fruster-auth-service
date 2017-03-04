@@ -32,7 +32,6 @@ module.exports.start = function(busAddress, mongoUrl)  {
 			bus.subscribe("auth-service.generate-jwt-token-for-user.token", req => generateJWTToken.handle(req, false));
 			bus.subscribe( /* deprecated */ "auth-service.generate-jwt-token-for-user.web", req => generateJWTToken.handle(req, true));
 			bus.subscribe( /* deprecated */ "auth-service.generate-jwt-token-for-user.app", req => generateJWTToken.handle(req, false));
-
 			bus.subscribe("http.post.auth.logout", req => logout.handle(req));
 		})
 		.then(() => log.info("Auth service is up and running"));
