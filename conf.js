@@ -38,7 +38,7 @@ module.exports = {
   refreshTokenCollection: "refresh-tokens",
 
   userServiceGetUserSubject: process.env.USER_SERVICE_GET_USER_SUBJECT || "user-service.get-user"
-
+  
 };
 
 function parseArray(str) {
