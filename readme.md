@@ -138,7 +138,9 @@ Get fresh access token by providing a refresh token.
     
     {
         // ...
-        "refreshToken": "{refresh token}"
+        "data": {
+		"refreshToken": "{refresh token}"
+	}
     }
 
 #### Success response
