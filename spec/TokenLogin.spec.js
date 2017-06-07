@@ -65,7 +65,7 @@ describe("Token login service", () => {
 				return refreshTokenColl.findOne({
 					token: resp.data.refreshToken
 				}).then((token) => {
-					expect(token).toBeDefined("should gotten refreshToken " + resp.data.refreshToken)
+					expect(token).toBeTruthy("should gotten refreshToken " + resp.data.refreshToken)
 					expect(token.userId).toBe("id");
 					expect(token.expires.getTime()).not.toBeLessThan(now);
 					expect(token.expired).toBe(false);
