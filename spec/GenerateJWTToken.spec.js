@@ -56,7 +56,7 @@ describe("Generate JWT token", () => {
 				expect(resp.data.profile.id).toBe("id");
 				expect(resp.data.profile.firstName).toBe("firstName");
 
-				var decodedJWT = jwt.decode(resp.data.accessToken);
+				let decodedJWT = jwt.decode(resp.data.accessToken);
 
 				expect(decodedJWT.id).toBe("id");
 				expect(decodedJWT.firstName).toBe("firstName");
@@ -65,7 +65,8 @@ describe("Generate JWT token", () => {
 
 				return refreshTokenColl.findOne({
 					token: resp.data.refreshToken
-				}).then((token) => {
+				}).then((token) => {					
+					expect(token).toBeDefined("token");
 					expect(token.userId).toBe("id");
 					expect(token.expires).toBeDefined();
 					expect(token.expired).toBe(false);
