@@ -22,7 +22,7 @@ describe("Generate JWT token", () => {
 		}
 	});
 
-	it("should generate JWT token for token/app auth", done => {
+	fit("should generate JWT token for token/app auth", done => {
 		bus.subscribe(conf.userServiceGetUserSubject, () => {
 			return {
 				"status": 200,
