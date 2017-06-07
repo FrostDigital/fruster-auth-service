@@ -22,10 +22,30 @@ module.exports.start = function(busAddress, mongoUrl)  {
 			let generateJWTToken = new GenerateJWTToken(tokenLogin, cookieLogin);
 			let decodeToken = new DecodeToken();
 
-			bus.subscribe("http.post.auth.cookie", req => cookieLogin.handle(req));
-			bus.subscribe("http.post.auth.token", req => tokenLogin.handle(req));
-			bus.subscribe( /* deprecated */ "http.post.auth.web", req => cookieLogin.handle(req));
-			bus.subscribe( /* deprecated */ "http.post.auth.app", req => tokenLogin.handle(req));
+			bus.subscribe({
+				subject: "http.post.auth.cookie",
+				requestSchema: "authRequest"
+			}, req => cookieLogin.handle(req));
+
+			bus.subscribe({
+				subject: "http.post.auth.token",
+				requestSchema: "authRequest",
+				responseSchema: "tokenAuthResponse"
+			}, req => tokenLogin.handle(req));
+
+			bus.subscribe({
+				subject: "http.post.auth.web",
+				requestSchema: "authRequest",
+				deprectated: "Use http.post.auth.web instead"
+			}, req => cookieLogin.handle(req));
+
+			bus.subscribe({
+				subject: "http.post.auth.app",
+				requestSchema: "authRequest",
+				responseSchema: "tokenAuthResponse",
+				deprectated: "Use http.post.auth.token instead"
+			}, req => tokenLogin.handle(req));
+			
 			bus.subscribe("http.post.auth.refresh", req => refresh.handle(req));
 			bus.subscribe("auth-service.decode-token", req => decodeToken.handle(req));
 			bus.subscribe("auth-service.generate-jwt-token-for-user.cookie", req => generateJWTToken.handle(req, true));

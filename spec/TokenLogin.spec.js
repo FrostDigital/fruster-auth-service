@@ -47,7 +47,7 @@ describe("Token login service", () => {
 					password: "ZlatansPonyTail"
 				}
 			})
-			.then(function(resp) {
+			.then((resp) => {
 				expect(resp.status).toBe(200);
 				expect(resp.reqId).toBe(reqId);
 				expect(resp.data.accessToken).toBeDefined();
@@ -64,7 +64,7 @@ describe("Token login service", () => {
 
 				return refreshTokenColl.findOne({
 					token: resp.data.refreshToken
-				}).then(function(token) {
+				}).then((token) => {
 					expect(token.userId).toBe("id");
 					expect(token.expires.getTime()).not.toBeLessThan(now);
 					expect(token.expired).toBe(false);
@@ -93,8 +93,32 @@ describe("Token login service", () => {
 				}
 			})
 			.then(done.fail)
-			.catch(function(error) {
+			.catch((error) => {
 				expect(error.status).toBe(401);
+				expect(error.reqId).toBe(reqId);
+				done();
+			});
+	});
+
+	it("should return 400 if username was not provided", done => {
+		var reqId = "a-req-id";
+
+		bus.subscribe("user-service.validate-password", req => {
+			return {
+				status: 401,
+				reqId: req.reqId
+			};
+		});
+
+		bus.request("http.post.auth.token", {
+				reqId: reqId,
+				data: {					
+					password: "ZlatansPonyTail"
+				}
+			})
+			.then(done.fail)
+			.catch((error) => {
+				expect(error.status).toBe(400);
 				expect(error.reqId).toBe(reqId);
 				done();
 			});
