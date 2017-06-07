@@ -36,7 +36,7 @@ module.exports.start = function(busAddress, mongoUrl)  {
 			bus.subscribe({
 				subject: "http.post.auth.web",
 				requestSchema: "authRequest",
-				deprectated: "Use http.post.auth.web instead"
+				deprectated: "Use http.post.auth.cookie instead"
 			}, req => cookieLogin.handle(req));
 
 			bus.subscribe({
