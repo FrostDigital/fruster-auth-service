@@ -65,13 +65,17 @@ describe("Generate JWT token", () => {
 
 				return refreshTokenColl.findOne({
 					token: resp.data.refreshToken
-				}).then(function(token) {
+				}).then((token) => {
 					expect(token.userId).toBe("id");
 					expect(token.expires).toBeDefined();
 					expect(token.expired).toBe(false);
 
 					done();
 				});
+			})
+			.catch(err => {
+				console.log(err);
+				done.fail();
 			});
 	});
 
