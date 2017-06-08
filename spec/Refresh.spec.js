@@ -10,11 +10,11 @@ const bus = require("fruster-bus"),
 	testUtils = require("fruster-test-utils");
 
 
-describe("Token login service", () => {
+describe("Refresh", () => {
 	let refreshTokenColl;
 
 	testUtils.startBeforeEach({
-		mongoUrl: "mongodb://localhost:27017/token-login-test",
+		mongoUrl: "mongodb://localhost:27017/refresh-test",
 		service: authService,
 		bus: bus,
 		afterStart: (connection) => {
@@ -24,6 +24,8 @@ describe("Token login service", () => {
 	});
 
 	function createMockRefreshTokens() {
+		refreshTokenColl.drop();
+
 		let refreshTokens = [{
 			id: uuid.v4(),
 			userId: "userId",
