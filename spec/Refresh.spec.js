@@ -19,12 +19,11 @@ describe("Token login service", () => {
 		bus: bus,
 		afterStart: (connection) => {
 			refreshTokenColl = connection.db.collection(constants.collection.refreshTokens);
-			return Promise.resolve();
+			return createMockRefreshTokens();			
 		}
 	});
 
-	beforeEach(done => {
-
+	function createMockRefreshTokens() {
 		let refreshTokens = [{
 			id: uuid.v4(),
 			userId: "userId",
@@ -45,9 +44,9 @@ describe("Token login service", () => {
 			expires: new Date(Date.now() + 1000 * 60)
 		}];
 
-		Promise.all(refreshTokens.map(o => refreshTokenColl.insert(o))).then(done);
-	});
-
+		return Promise.all(refreshTokens.map(o => refreshTokenColl.insert(o)));		
+	}
+	
 	it("should get new access token from refresh token", done => {
 
 		var reqId = "a-req-id";
