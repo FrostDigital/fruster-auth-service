@@ -19,7 +19,7 @@
   },
   "devDependencies": {
     "cookie": "^0.3.1",
-    "fruster-test-utils": "^0.3.8",
+    "fruster-test-utils": "^0.3.12",
     "jasmine": "^2.5.2",
     "jasmine-spec-reporter": "^2.7.0"
   },
