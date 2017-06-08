@@ -24,29 +24,30 @@ describe("Refresh", () => {
 	});
 
 	function createMockRefreshTokens() {
-		refreshTokenColl.drop();
+		return refreshTokenColl.remove({}).then(() => {
 
-		let refreshTokens = [{
-			id: uuid.v4(),
-			userId: "userId",
-			token: "validToken",
-			expired: false,
-			expires: new Date(Date.now() + 1000 * 60)
-		}, {
-			id: uuid.v4(),
-			userId: "userId",
-			token: "expiredByDateToken",
-			expired: false,
-			expires: new Date(Date.now() - 1000) // <-- expired by date
-		}, {
-			id: uuid.v4(),
-			userId: "userId",
-			token: "expiredToken",
-			expired: true, // <-- explicitly expired
-			expires: new Date(Date.now() + 1000 * 60)
-		}];
+			let refreshTokens = [{
+				id: uuid.v4(),
+				userId: "userId",
+				token: "validToken",
+				expired: false,
+				expires: new Date(Date.now() + 1000 * 60)
+			}, {
+				id: uuid.v4(),
+				userId: "userId",
+				token: "expiredByDateToken",
+				expired: false,
+				expires: new Date(Date.now() - 1000) // <-- expired by date
+			}, {
+				id: uuid.v4(),
+				userId: "userId",
+				token: "expiredToken",
+				expired: true, // <-- explicitly expired
+				expires: new Date(Date.now() + 1000 * 60)
+			}];
 
-		return Promise.all(refreshTokens.map(o => refreshTokenColl.insert(o)));		
+			return Promise.all(refreshTokens.map(o => refreshTokenColl.insert(o)));		
+		});
 	}
 	
 	it("should get new access token from refresh token", done => {
