@@ -1,16 +1,17 @@
-const bus = require("fruster-bus"),
-	cookie = require("cookie"),
-	log = require("fruster-log"),
-	jwt = require("../lib/utils/jwt"),
-	authService = require("../auth-service"),
-	conf = require("../conf"),
-	uuid = require("uuid"),
-	errors = require("../errors"),
-	constants = require("../constants"),
-	testUtils = require("fruster-test-utils");
+const bus = require("fruster-bus");
+const cookie = require("cookie");
+const log = require("fruster-log");
+const jwt = require("../lib/utils/jwt");
+const authService = require("../auth-service");
+const conf = require("../conf");
+const uuid = require("uuid");
+const errors = require("../errors");
+const constants = require("../constants");
+const testUtils = require("fruster-test-utils");
+const RefreshTokenRepo = require("../lib/repos/RefreshTokenRepo");
 
 describe("Generate JWT token", () => {
-	let refreshTokenColl;
+	let refreshTokenColl, refreshTokenRepo;
 
 	testUtils.startBeforeEach({
 		mongoUrl: "mongodb://localhost:27017/generate-jwt-token-test",
@@ -18,7 +19,7 @@ describe("Generate JWT token", () => {
 		bus: bus,
 		afterStart: (connection) => {
 			refreshTokenColl = connection.db.collection(constants.collection.refreshTokens);
-			return Promise.resolve();
+			refreshTokenRepo = new RefreshTokenRepo(connection.db);
 		}
 	});
 
@@ -63,11 +64,7 @@ describe("Generate JWT token", () => {
 				expect(decodedJWT.lastName).toBe("lastName");
 				expect(decodedJWT.email).toBe("email");
 
-
-				return refreshTokenColl.find().toArray().then(all => {
-					console.log(11111, all);
-				})
-				.then(refreshTokenColl.findOne({ token: resp.data.refreshToken }))
+				return refreshTokenRepo.get(resp.data.refreshToken)
 				.then((token) => {	
 					expect(token).toBeTruthy("should gotten refreshToken " + resp.data.refreshToken);					
 					expect(token.userId).toBe("id");
