@@ -14,7 +14,7 @@ describe("Token login service", () => {
 	let refreshTokenColl;
 
 	testUtils.startBeforeEach({
-		mongoUrl: "mongodb://localhost:27017/auth-service-test",
+		mongoUrl: "mongodb://localhost:27017/token-login-test",
 		service: authService,
 		bus: bus,
 		afterStart: (connection) => {
@@ -25,7 +25,7 @@ describe("Token login service", () => {
 
 	beforeEach(done => {
 
-		var refreshTokens = [{
+		let refreshTokens = [{
 			id: uuid.v4(),
 			userId: "userId",
 			token: "validToken",
