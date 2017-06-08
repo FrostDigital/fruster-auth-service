@@ -12,7 +12,7 @@ const bus = require("fruster-bus"),
 describe("Decode and validate token", () => {
 
 	testUtils.startBeforeEach({
-		mongoUrl: "mongodb://localhost:27017/auth-service-test",
+		mongoUrl: "mongodb://localhost:27017/decode-token-test",
 		service: authService,
 		bus: bus		
 	});

@@ -12,7 +12,7 @@ const bus = require("fruster-bus"),
 describe("Logout", () => {
 
 	testUtils.startBeforeEach({
-		mongoUrl: "mongodb://localhost:27017/auth-service-test",
+		mongoUrl: "mongodb://localhost:27017/logout-service-test",
 		service: authService,
 		bus: bus
 	});

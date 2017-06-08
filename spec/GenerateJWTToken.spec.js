@@ -13,7 +13,7 @@ describe("Generate JWT token", () => {
 	let refreshTokenColl;
 
 	testUtils.startBeforeEach({
-		mongoUrl: "mongodb://localhost:27017/auth-service-test",
+		mongoUrl: "mongodb://localhost:27017/generate-jwt-token-test",
 		service: authService,
 		bus: bus,
 		afterStart: (connection) => {
