@@ -63,9 +63,12 @@ describe("Generate JWT token", () => {
 				expect(decodedJWT.lastName).toBe("lastName");
 				expect(decodedJWT.email).toBe("email");
 
-				return refreshTokenColl.findOne({
-					token: resp.data.refreshToken
-				}).then((token) => {	
+
+				return refreshTokenColl.find().toArray().then(all => {
+					console.log(11111, all);
+				})
+				.then(refreshTokenColl.findOne({ token: resp.data.refreshToken }))
+				.then((token) => {	
 					expect(token).toBeTruthy("should gotten refreshToken " + resp.data.refreshToken);					
 					expect(token.userId).toBe("id");
 					expect(token.expires).toBeDefined();
