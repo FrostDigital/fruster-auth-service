@@ -77,6 +77,7 @@ describe("Token login service", () => {
 			.then(resp => {
 				var decodedAccessToken = jwt.decode(resp.data.accessToken);
 				expect(decodedAccessToken.id).toBe("userId");
+				expect(resp.data.refreshToken).toBe("validToken");
 				done();
 			})
 			.catch(err => {
