@@ -52,14 +52,19 @@ describe("Cookie login", () => {
 				expect(resp.headers["Set-Cookie"]).not.toMatch("domain");
 				expect(resp.headers["Set-Cookie"]).toMatch("HttpOnly;");
 
-				var jwtCookie = cookie.parse(resp.headers["Set-Cookie"]).jwt;
-				var decodedJWT = jwt.decode(jwtCookie);
-
+				let jwtCookie = cookie.parse(resp.headers["Set-Cookie"]).jwt;
+				let decodedJWT = jwt.decode(jwtCookie);
+				
 				expect(decodedJWT.id).toBe("id");
 				expect(decodedJWT.firstName).toBe("firstName");
 				expect(decodedJWT.lastName).toBe("lastName");
 				expect(decodedJWT.email).toBe("email");
 				expect(decodedJWT.exp).toBeDefined();
+
+				// Check that cookie expiration and jwt token expiration is roughly the same
+				let cookieExp = new Date(cookie.parse(resp.headers["Set-Cookie"]).expires);
+				let jwtExp = new Date(decodedJWT.exp * 1000);
+				expect(Math.round(cookieExp.getTime()/10000)).toEqual(Math.round(jwtExp.getTime()/10000))
 
 				done();
 			})
