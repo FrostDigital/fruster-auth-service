@@ -17,36 +17,42 @@ describe("Logout", () => {
 		bus: bus
 	});
 
-	it("should remove cookie after logout", done => {
-		let reqId = "a-req-id";
-		let credentials = {
+	it("should remove cookie after logout", async done => {
+		const reqId = "a-req-id";
+		const credentials = {
 			username: "joelsoderstrom",
 			password: "ZlatansPonyTail"
 		}
-		
+
+		testUtils.mockService({
+			subject: conf.userServiceGetUserSubject,
+			data: [{
+				id: "id", firstName: "firstName", lastName: "lastName", email: "email"
+			}],
+			expectMaxInvocation: 1
+		});
+
 		testUtils.mockService({
 			subject: "user-service.validate-password",
-			data: {
-				id: "id",
-				firstName: "firstName",
-				lastName: "lastName",
-				email: "email"				
-			},
+			data: { id: "id" },
 			expectData: credentials
 		});
 
-		bus.request("http.post.auth.web", { reqId: reqId, data: credentials })
-			.then(resp => bus.request("http.post.auth.logout", { reqId: reqId }))
-			.then(resp => {
-				expect(resp.status).toBe(200);
-				expect(resp.reqId).toBe(reqId);
-				expect(resp.headers["Set-Cookie"]).toBeDefined();
-				expect(resp.headers["Set-Cookie"]).toMatch("delete");
-				expect(resp.headers["Set-Cookie"]).toMatch("expires=Thu, 01 Jan 1970 00:00:00 GMT");
+		try {
+			await bus.request("http.post.auth.web", { reqId: reqId, data: credentials });
+			const resp = await bus.request("http.post.auth.logout", { reqId: reqId });
 
-				done();
-			})
-			.catch(done.fail);
+			expect(resp.status).toBe(200);
+			expect(resp.reqId).toBe(reqId);
+			expect(resp.headers["Set-Cookie"]).toBeDefined();
+			expect(resp.headers["Set-Cookie"]).toMatch("delete");
+			expect(resp.headers["Set-Cookie"]).toMatch("expires=Thu, 01 Jan 1970 00:00:00 GMT");
+
+			done();
+		} catch (err) {
+			log.error(err);
+			done.fail();
+		}
 	});
 
 });
