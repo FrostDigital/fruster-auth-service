@@ -18,114 +18,126 @@ describe("Cookie login", () => {
 	});
 
 
-	it("should login and return JWT as cookie", done => {
-		var reqId = "a-req-id";
-		var username = "joelsoderstrom";
-		var password = "ZlatansPonyTail";
+	it("should login and return JWT as cookie", async done => {
+		const reqId = "a-req-id";
+		const username = "joelsoderstrom";
+		const password = "ZlatansPonyTail";
 
-		bus.subscribe("user-service.validate-password", req => {
-			expect(req.data.username).toBe(username);
-			expect(req.data.password).toBe(password);
-
-			return {
-				status: 200,
-				data: {
-					"id": "id",
-					"firstName": "firstName",
-					"lastName": "lastName",
-					"email": "email"
-				}
-			};
+		testUtils.mockService({
+			subject: conf.userServiceGetUserSubject,
+			data: [{
+				id: "id", firstName: "firstName", lastName: "lastName", email: "email"
+			}],
+			expectMaxInvocation: 1
 		});
 
-		bus.request("http.post.auth.web", {
+		testUtils.mockService({
+			subject: "user-service.validate-password",
+			data: [{ id: "id" }],
+			expectMaxInvocation: 1,
+			expectData: {
+				username, password
+			}
+		});
+
+		try {
+			const resp = await bus.request("http.post.auth.web", {
 				reqId: reqId,
 				data: {
-					username: username,
-					password: password
+					username, password
 				}
-			})
-			.then(resp => {
-				expect(resp.status).toBe(200);
-				expect(resp.reqId).toBe(reqId);
-				expect(resp.headers["Set-Cookie"]).toBeDefined();
-				expect(resp.headers["Set-Cookie"]).not.toMatch("domain");
-				expect(resp.headers["Set-Cookie"]).toMatch("HttpOnly;");
+			});
 
-				var jwtCookie = cookie.parse(resp.headers["Set-Cookie"]).jwt;
-				var decodedJWT = jwt.decode(jwtCookie);
+			expect(resp.status).toBe(200);
+			expect(resp.reqId).toBe(reqId);
+			expect(resp.headers["Set-Cookie"]).toBeDefined();
+			expect(resp.headers["Set-Cookie"]).not.toMatch("domain");
+			expect(resp.headers["Set-Cookie"]).toMatch("HttpOnly;");
 
-				expect(decodedJWT.id).toBe("id");
-				expect(decodedJWT.firstName).toBe("firstName");
-				expect(decodedJWT.lastName).toBe("lastName");
-				expect(decodedJWT.email).toBe("email");
-				expect(decodedJWT.exp).toBeDefined();
+			const jwtCookie = cookie.parse(resp.headers["Set-Cookie"]).jwt;
+			const decodedJWT = jwt.decode(jwtCookie);
 
-				done();
-			})
-			.catch(done.fail);
+			expect(decodedJWT.id).toBe("id");
+			expect(decodedJWT.firstName).toBe("firstName");
+			expect(decodedJWT.lastName).toBe("lastName");
+			expect(decodedJWT.email).toBe("email");
+			expect(decodedJWT.exp).toBeDefined();
+
+			done();
+		} catch (err) {
+			log.error(err);
+			done.fail();
+		}
 	});
 
-	it("should login and return a non HttpOnly JWT as cookie", done => {
+	it("should login and return a non HttpOnly JWT as cookie", async done => {
 		conf.jwtCookieHttpOnly = false;
 
-		var reqId = "a-req-id";
-		var username = "joelsoderstrom";
-		var password = "ZlatansPonyTail";
+		const reqId = "a-req-id";
+		const username = "joelsoderstrom";
+		const password = "ZlatansPonyTail";
 
-		bus.subscribe("user-service.validate-password", req => {
-			return {
-				status: 200,
-				data: {
-					"id": "id",
-					"firstName": "firstName",
-					"lastName": "lastName",
-					"email": "email"
-				}
-			};
+		testUtils.mockService({
+			subject: conf.userServiceGetUserSubject,
+			data: [{
+				id: "id", firstName: "firstName", lastName: "lastName", email: "email"
+			}],
+			expectMaxInvocation: 1
 		});
 
-		bus.request("http.post.auth.web", {
-				reqId: reqId,
-				data: {
-					username: username,
-					password: password
-				}
-			})
-			.then(resp => {
-				expect(resp.headers["Set-Cookie"]).not.toMatch("HttpOnly;");
-				conf.jwtCookieHttpOnly = true;
-				done();
-			})
-			.catch(done.fail);
-	});
-
-	it("should return 401 if invalid username or password", done => {
-		var reqId = "a-req-id";
-
-		bus.subscribe("user-service.validate-password", req => {
-			return {
-				status: 401
-			};
+		testUtils.mockService({
+			subject: "user-service.validate-password",
+			data: [{ id: "id" }],
+			expectMaxInvocation: 1,
+			expectData: {
+				username, password
+			}
 		});
 
-		bus.request("http.post.auth.web", {
+		try {
+			const resp = await bus.request("http.post.auth.web", {
 				reqId: reqId,
 				data: {
-					username: "joelsoderstrom",
-					password: "ZlatansPonyTail"
+					username, password
 				}
-			})
-			.then(done.fail)
-			.catch(error => {
-				expect(error.status).toBe(401);
-				expect(error.reqId).toBe(reqId);
-				expect(error.headers).toBeUndefined();
-				done();
 			});
+
+			expect(resp.headers["Set-Cookie"]).not.toMatch("HttpOnly;");
+			conf.jwtCookieHttpOnly = true;
+
+			done();
+		} catch (err) {
+			log.error(err);
+			done.fail();
+		}
 	});
 
-	it("should generate web JWT token for user", done => {
+	it("should return 401 if invalid username or password", async done => {
+		const reqId = "a-req-id";
+
+		bus.subscribe("user-service.validate-password", req => {
+			return { status: 401 };
+		});
+
+		try {
+			await bus.request("http.post.auth.web", {
+				reqId: reqId,
+				data: {
+					username: "joelsoderstrom", password: "ZlatansPonyTail"
+				}
+			});
+
+			done.fail();
+		} catch (err) {
+			expect(err.status).toBe(401);
+			expect(err.reqId).toBe(reqId);
+			expect(err.headers).toBeUndefined();
+			done();
+		}
+
+	});
+
+	it("should generate web JWT token for user", async done => {
 		bus.subscribe(conf.userServiceGetUserSubject, () => {
 			return {
 				"status": 200,
@@ -144,31 +156,35 @@ describe("Cookie login", () => {
 			};
 		});
 
-		bus.request("auth-service.generate-jwt-token-for-user.web", {
+		try {
+			const resp = await bus.request("auth-service.generate-jwt-token-for-user.web", {
 				reqId: "reqId",
 				data: {
 					firstName: "viktor"
 				}
-			})
-			.then(resp => {
-				expect(resp.status).toBe(200);
-				expect(resp.reqId).toBe("reqId");
-				expect(resp.headers["Set-Cookie"]).toBeDefined();
-
-				let jwtCookie = cookie.parse(resp.headers["Set-Cookie"]).jwt;
-				let decodedJWT = jwt.decode(jwtCookie);
-
-				expect(decodedJWT.id).toBe("id");
-				expect(decodedJWT.firstName).toBe("firstName");
-				expect(decodedJWT.lastName).toBe("lastName");
-				expect(decodedJWT.email).toBe("email");
-				expect(decodedJWT.exp).toBeDefined();
-
-				done();
 			});
+
+			expect(resp.status).toBe(200);
+			expect(resp.reqId).toBe("reqId");
+			expect(resp.headers["Set-Cookie"]).toBeDefined();
+
+			const jwtCookie = cookie.parse(resp.headers["Set-Cookie"]).jwt;
+			const decodedJWT = jwt.decode(jwtCookie);
+
+			expect(decodedJWT.id).toBe("id");
+			expect(decodedJWT.firstName).toBe("firstName");
+			expect(decodedJWT.lastName).toBe("lastName");
+			expect(decodedJWT.email).toBe("email");
+			expect(decodedJWT.exp).toBeDefined();
+
+			done();
+		} catch (err) {
+			log.error(err);
+			done.fail();
+		}
 	});
 
-	it("should fail to generate web JWT token if user not found", done => {
+	it("should fail to generate web JWT token if user not found", async done => {
 		bus.subscribe(conf.userServiceGetUserSubject, () => {
 			return {
 				"status": 200,
@@ -178,44 +194,47 @@ describe("Cookie login", () => {
 			};
 		});
 
-		bus.request("auth-service.generate-jwt-token-for-user.web", {
+		try {
+			const resp = await bus.request("auth-service.generate-jwt-token-for-user.web", {
 				reqId: "reqId",
 				data: {
 					firstName: "does not exist"
 				}
-			})
-			.catch(resp => {
-				expect(resp.status).toBe(404);
-				expect(resp.error.code).toBe(errors.code.userNotFound);
-				done();
 			});
+
+			done.fail();
+		} catch (err) {
+			expect(err.status).toBe(404);
+			expect(err.error.code).toBe(errors.code.userNotFound);
+			done();
+		}
 	});
 
-	it("should fail to generate web JWT token if multiple users found", done => {
+	it("should fail to generate web JWT token if multiple users found", async done => {
 		bus.subscribe(conf.userServiceGetUserSubject, () => {
 			return {
 				"status": 200,
-				"data": [{
-					firstName: "fakeUser1"
-				}, {
-					firstName: "fakeUser2"
-				}],
+				"data": [
+					{ firstName: "fakeUser1" },
+					{ firstName: "fakeUser2" }
+				],
 				"error": {},
 				"reqId": "reqId"
 			};
 		});
-
-		bus.request("auth-service.generate-jwt-token-for-user.web", {
+		try {
+			const resp = await bus.request("auth-service.generate-jwt-token-for-user.web", {
 				reqId: "reqId",
-				data: {
-					firstName: "does not exist"
-				}
-			})
-			.catch(resp => {
-				expect(resp.status).toBe(500);
-				expect(resp.error.code).toBe(errors.code.unexpectedError);
-				done();
+				data: { firstName: "does not exist" }
 			});
+
+			done.fail();
+		} catch (err) {
+			expect(err.status).toBe(500);
+			expect(err.error.code).toBe(errors.code.unexpectedError);
+			done();
+		}
+
 	});
 
 
