@@ -25,29 +25,31 @@ describe("Token login service", () => {
 
 	it("should login and return access and refreshtoken in body", done => {
 		const now = Date.now();
-		var reqId = "a-req-id";
+		const reqId = "a-req-id";
 
-		bus.subscribe("user-service.validate-password", req => {
-			return {
-				status: 200,
-				reqId: req.reqId,
-				data: {
-					"id": "id",
-					"firstName": "firstName",
-					"lastName": "lastName",
-					"email": "email"
-				}
-			};
+		testUtils.mockService({
+			subject: conf.userServiceGetUserSubject,
+			data: [{
+				id: "id", firstName: "firstName", lastName: "lastName", email: "email"
+			}],
+			expectMaxInvocation: 1
+		});
+
+		testUtils.mockService({
+			subject: "user-service.validate-password",
+			data: {
+				id: "id"
+			}
 		});
 
 		bus.request("http.post.auth.app", {
-				reqId: reqId,
-				data: {
-					username: "joelsoderstrom",
-					password: "ZlatansPonyTail"
-				}
-			})
-			.then(function(resp) {
+			reqId: reqId,
+			data: {
+				username: "joelsoderstrom",
+				password: "ZlatansPonyTail"
+			}
+		})
+			.then(function (resp) {
 				expect(resp.status).toBe(200);
 				expect(resp.reqId).toBe(reqId);
 				expect(resp.data.accessToken).toBeDefined();
@@ -55,7 +57,7 @@ describe("Token login service", () => {
 				expect(resp.data.profile.id).toBe("id");
 				expect(resp.data.profile.firstName).toBe("firstName");
 
-				var decodedJWT = jwt.decode(resp.data.accessToken);
+				const decodedJWT = jwt.decode(resp.data.accessToken);
 
 				expect(decodedJWT.id).toBe("id");
 				expect(decodedJWT.firstName).toBe("firstName");
@@ -77,7 +79,7 @@ describe("Token login service", () => {
 	});
 
 	it("should return 401 if invalid username or password", done => {
-		var reqId = "a-req-id";
+		const reqId = "a-req-id";
 
 		bus.subscribe("user-service.validate-password", req => {
 			return {
@@ -87,14 +89,14 @@ describe("Token login service", () => {
 		});
 
 		bus.request("http.post.auth.token", {
-				reqId: reqId,
-				data: {
-					username: "joelsoderstrom",
-					password: "ZlatansPonyTail"
-				}
-			})
+			reqId: reqId,
+			data: {
+				username: "joelsoderstrom",
+				password: "ZlatansPonyTail"
+			}
+		})
 			.then(done.fail)
-			.catch(function(error) {
+			.catch(function (error) {
 				expect(error.status).toBe(401);
 				expect(error.reqId).toBe(reqId);
 				done();
