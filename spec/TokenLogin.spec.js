@@ -63,10 +63,11 @@ describe("Token login service", () => {
 				expect(decodedJWT.firstName).toBe("firstName");
 				expect(decodedJWT.lastName).toBe("lastName");
 				expect(decodedJWT.email).toBe("email");
+				expect(decodedJWT.exp).toBeDefined("exp");
 
 				return refreshTokenColl.findOne({
 					token: resp.data.refreshToken
-				}).then(function (token) {
+				}).then((token) => {
 					expect(token.userId).toBe("id");
 					expect(token.expires.getTime()).not.toBeLessThan(now);
 					expect(token.expired).toBe(false);

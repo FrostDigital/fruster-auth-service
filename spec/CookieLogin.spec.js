@@ -46,28 +46,31 @@ describe("Cookie login", () => {
 				data: {
 					username, password
 				}
-			});
+			})
+			.then(resp => {
+				expect(resp.status).toBe(200);
+				expect(resp.reqId).toBe(reqId);
+				expect(resp.headers["Set-Cookie"]).toBeDefined();
+				expect(resp.headers["Set-Cookie"]).not.toMatch("domain");
+				expect(resp.headers["Set-Cookie"]).toMatch("HttpOnly;");
 
-			expect(resp.status).toBe(200);
-			expect(resp.reqId).toBe(reqId);
-			expect(resp.headers["Set-Cookie"]).toBeDefined();
-			expect(resp.headers["Set-Cookie"]).not.toMatch("domain");
-			expect(resp.headers["Set-Cookie"]).toMatch("HttpOnly;");
+				let jwtCookie = cookie.parse(resp.headers["Set-Cookie"]).jwt;
+				let decodedJWT = jwt.decode(jwtCookie);
+				
+				expect(decodedJWT.id).toBe("id");
+				expect(decodedJWT.firstName).toBe("firstName");
+				expect(decodedJWT.lastName).toBe("lastName");
+				expect(decodedJWT.email).toBe("email");
+				expect(decodedJWT.exp).toBeDefined();
 
-			const jwtCookie = cookie.parse(resp.headers["Set-Cookie"]).jwt;
-			const decodedJWT = jwt.decode(jwtCookie);
+				// Check that cookie expiration and jwt token expiration is roughly the same
+				let cookieExp = new Date(cookie.parse(resp.headers["Set-Cookie"]).expires);
+				let jwtExp = new Date(decodedJWT.exp * 1000);
+				expect(Math.round(cookieExp.getTime()/10000)).toEqual(Math.round(jwtExp.getTime()/10000))
 
-			expect(decodedJWT.id).toBe("id");
-			expect(decodedJWT.firstName).toBe("firstName");
-			expect(decodedJWT.lastName).toBe("lastName");
-			expect(decodedJWT.email).toBe("email");
-			expect(decodedJWT.exp).toBeDefined();
-
-			done();
-		} catch (err) {
-			log.error(err);
-			done.fail();
-		}
+				done();
+			})
+			.catch(done.fail);
 	});
 
 	it("should login and return a non HttpOnly JWT as cookie", async done => {

@@ -19,11 +19,11 @@
   },
   "devDependencies": {
     "cookie": "^0.3.1",
-    "fruster-test-utils": "^0.3.8",
-    "jasmine": "^2.7.0",
+    "fruster-test-utils": "^0.3.12",
+    "jasmine": "^2.6.0",
     "jasmine-spec-reporter": "^2.7.0"
   },
   "engines": {
-    "node": "7.10.0"
+    "node": "7.9.0"
   }
 }
