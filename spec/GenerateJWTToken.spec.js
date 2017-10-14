@@ -16,6 +16,7 @@ describe("Generate JWT token", () => {
 		mongoUrl: "mongodb://localhost:27017/auth-service-test",
 		service: authService,
 		bus: bus,
+		mockNats: true,
 		afterStart: (connection) => {
 			refreshTokenColl = connection.db.collection(constants.collection.refreshTokens);
 			return Promise.resolve();
