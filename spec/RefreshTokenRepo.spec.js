@@ -9,6 +9,7 @@ describe("Refresh token repo", () => {
 	testUtils.startBeforeAll({
 		mongoUrl: "mongodb://localhost:27017/refreshTokenRepo-test",
 		bus: bus,
+		mockNats: true,
 		afterStart: (connection) => {
 			repo = new RefreshTokenRepo(connection.db);
 			return Promise.resolve();
