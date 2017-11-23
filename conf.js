@@ -18,6 +18,7 @@ module.exports = {
   userAttrsWhitelist: parseArray(process.env.USER_ATTRS_WHITELIST) || ["id", "firstName", "lastName", "email", "scopes", "roles"],
 
   // How long JWT cookie will survive
+  /**@type {String} */
   jwtCookieAge: process.env.JWT_COOKIE_AGE || "10d",
 
   // Domain that JWT Cookie is valid for
@@ -27,9 +28,11 @@ module.exports = {
   jwtCookieHttpOnly: (process.env.JWT_COOKIE_HTTP_ONLY || "true") == "true",
 
   // How long access token is valid
+  /** @type {String} */
   accessTokenTTL: process.env.ACCESS_TOKEN_TTL || "1d",
 
   // How long a refresh token is valid
+  /** @type {String} */
   refreshTokenTTL: process.env.REFRESH_TOKEN_TTL || "365d",
 
   // Mongo database URL

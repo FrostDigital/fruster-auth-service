@@ -1,29 +1,29 @@
 {
-  "name": "fruster-auth-service",
-  "version": "0.0.1",
-  "private": true,
-  "scripts": {
-    "start": "node ./app.js",
-    "test": "node ./spec/support/jasmine-runner.js"
-  },
-  "dependencies": {
-    "fruster-bus": "^0.2.14",
-    "fruster-health": "~0.0.11",
-    "fruster-log": "~0.0.15",
-    "jwt-simple": "^0.5.0",
-    "lodash": "^4.16.6",
-    "mongodb": "^2.2.30",
-    "ms": "^0.7.2",
-    "npm": "^3.10.9",
-    "uuid": "^2.0.3"
-  },
-  "devDependencies": {
-    "cookie": "^0.3.1",
-    "fruster-test-utils": "^0.3.19",
-    "jasmine": "^2.6.0",
-    "jasmine-spec-reporter": "^2.7.0"
-  },
-  "engines": {
-    "node": "7.9.0"
-  }
+    "name": "fruster-auth-service",
+    "version": "0.0.1",
+    "private": true,
+    "scripts": {
+        "start": "node ./app.js",
+        "test": "node ./spec/support/jasmine-runner.js"
+    },
+    "dependencies": {
+        "fruster-bus": "^0.2.14",
+        "fruster-health": "~0.0.11",
+        "fruster-log": "~0.0.15",
+        "jwt-simple": "^0.5.0",
+        "lodash": "^4.16.6",
+        "mongodb": "^2.2.30",
+        "ms": "^0.7.2",
+        "npm": "^3.10.9",
+        "uuid": "^2.0.3"
+    },
+    "devDependencies": {
+        "cookie": "^0.3.1",
+        "fruster-test-utils": "^0.3.19",
+        "jasmine": "^2.6.0",
+        "jasmine-spec-reporter": "^2.7.0"
+    },
+    "engines": {
+        "node": "7.9.0"
+    }
 }
