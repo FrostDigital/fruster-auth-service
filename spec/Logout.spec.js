@@ -14,7 +14,8 @@ describe("Logout", () => {
 	testUtils.startBeforeEach({
 		mongoUrl: "mongodb://localhost:27017/auth-service-test",
 		service: authService,
-		bus: bus
+		bus: bus,
+		mockNats: true
 	});
 
 	it("should remove cookie after logout", async done => {
