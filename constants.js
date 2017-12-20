@@ -1,7 +1,5 @@
 module.exports = {
 
-	jwtCookieName: "jwt",
-
 	collection: {
 		refreshTokens: "refresh-tokens"
 	},
