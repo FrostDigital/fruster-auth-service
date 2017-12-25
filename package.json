@@ -7,20 +7,20 @@
         "test": "node ./spec/support/jasmine-runner.js"
     },
     "dependencies": {
-        "fruster-bus": "^0.2.14",
-        "fruster-health": "~0.0.11",
-        "fruster-log": "~0.0.15",
+        "fruster-bus": "^0.2.20",
+        "fruster-health": "0.0.12",
+        "fruster-log": "0.0.16",
         "jwt-simple": "^0.5.0",
         "lodash": "^4.16.6",
-        "mongodb": "^2.2.30",
+        "mongodb": "^2.2.33",
         "ms": "^0.7.2",
         "npm": "^3.10.9",
         "uuid": "^2.0.3"
     },
     "devDependencies": {
         "cookie": "^0.3.1",
-        "fruster-test-utils": "^0.3.19",
-        "jasmine": "^2.6.0",
+        "fruster-test-utils": "^0.3.20",
+        "jasmine": "^2.8.0",
         "jasmine-spec-reporter": "^2.7.0"
     },
     "engines": {

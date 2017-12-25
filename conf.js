@@ -17,6 +17,9 @@ module.exports = {
   // Attributes on user object to use in JWT token
   userAttrsWhitelist: parseArray(process.env.USER_ATTRS_WHITELIST) || ["id", "firstName", "lastName", "email", "scopes", "roles"],
 
+  // Name of jwt cookie
+  jwtCookieName: process.env.JWT_COOKIE_NAME || "jwt",
+
   // How long JWT cookie will survive
   /**@type {String} */
   jwtCookieAge: process.env.JWT_COOKIE_AGE || "10d",
