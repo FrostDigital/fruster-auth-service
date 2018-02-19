@@ -42,12 +42,12 @@ module.exports.start = async (busAddress, mongoUrl) => {
 	 * HTTP
 	 */
 	bus.subscribe({
-		subject: "http.post.auth.cookie",
+		subject: constants.endpoints.http.LOGIN_WITH_COOKIE,
 		requestSchema: "authRequest"
 	}, req => cookieLogin.handle(req));
 
 	bus.subscribe({
-		subject: "http.post.auth.token",
+		subject: constants.endpoints.http.LOGIN_WITH_TOKEN,
 		requestSchema: "authRequest",
 		responseSchema: "tokenAuthResponse"
 	}, req => tokenLogin.handle(req));
@@ -55,25 +55,25 @@ module.exports.start = async (busAddress, mongoUrl) => {
 	bus.subscribe({
 		subject: "http.post.auth.web",
 		requestSchema: "authRequest",
-		deprecated: "Use http.post.auth.cookie instead"
+		deprecated: `Use ${constants.endpoints.http.LOGIN_WITH_COOKIE} instead`
 	}, req => cookieLogin.handle(req));
 
 	bus.subscribe({
 		subject: "http.post.auth.app",
 		requestSchema: "authRequest",
 		responseSchema: "tokenAuthResponse",
-		deprecated: "Use http.post.auth.token instead"
+		deprecated: `Use ${constants.endpoints.http.LOGIN_WITH_TOKEN} instead`
 	}, req => tokenLogin.handle(req));
 
-	bus.subscribe("http.post.auth.refresh", req => refresh.handle(req));
-	bus.subscribe("http.post.auth.logout", req => logout.handle(req));
+	bus.subscribe(constants.endpoints.http.REFRESH_AUTH, req => refresh.handle(req));
+	bus.subscribe(constants.endpoints.http.LOGOUT, req => logout.handle(req));
 
 	/**
 	 * SERVICE
 	 */
-	bus.subscribe("auth-service.decode-token", req => decodeToken.handle(req));
-	bus.subscribe("auth-service.generate-jwt-token-for-user.cookie", req => generateJWTToken.handle(req, true));
-	bus.subscribe("auth-service.generate-jwt-token-for-user.token", req => generateJWTToken.handle(req, false));
+	bus.subscribe(constants.endpoints.service.DECODE_TOKEN, req => decodeToken.handle(req));
+	bus.subscribe(constants.endpoints.service.GENERATE_TOKEN_FOR_USER_COOKIE, req => generateJWTToken.handle(req, true));
+	bus.subscribe(constants.endpoints.service.GENERATE_TOKEN_FOR_USER_TOKEN, req => generateJWTToken.handle(req, false));
 	bus.subscribe( /* deprecated */ "auth-service.generate-jwt-token-for-user.web", req => generateJWTToken.handle(req, true));
 	bus.subscribe( /* deprecated */ "auth-service.generate-jwt-token-for-user.app", req => generateJWTToken.handle(req, false));
 
