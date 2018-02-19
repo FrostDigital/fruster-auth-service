@@ -26,21 +26,41 @@ module.exports.start = async (busAddress, mongoUrl) => {
 	/**
 	 * HTTP
 	 */
-	bus.subscribe(constants.endpoints.http.LOGIN_WITH_COOKIE, (req) => cookieLogin.handle(req));
-	bus.subscribe(constants.endpoints.http.LOGIN_WITH_TOKEN, (req) => tokenLogin.handle(req));
-	bus.subscribe( /* deprecated */ "http.post.auth.web", (req) => cookieLogin.handle(req));
-	bus.subscribe( /* deprecated */ "http.post.auth.app", (req) => tokenLogin.handle(req));
-	bus.subscribe(constants.endpoints.http.REFRESH_AUTH, (req) => refresh.handle(req));
-	bus.subscribe(constants.endpoints.http.LOGOUT, (req) => logout.handle(req));
+	bus.subscribe({
+		subject: constants.endpoints.http.LOGIN_WITH_COOKIE,
+		handle: req => cookieLogin.handle(req)
+	});
+	bus.subscribe({
+		subject: constants.endpoints.http.LOGIN_WITH_TOKEN,
+		handle: req => tokenLogin.handle(req)
+	});
+	bus.subscribe({
+		subject: "http.post.auth.web",
+		deprecated: `Use ${constants.endpoints.http.LOGIN_WITH_COOKIE} instead`,
+		handle: req => cookieLogin.handle(req)
+	});
+	bus.subscribe({
+		subject: "http.post.auth.app",
+		deprecated: `Use ${constants.endpoints.http.LOGIN_WITH_TOKEN} instead`,
+		handle: req => tokenLogin.handle(req)
+	});
+	bus.subscribe({
+		subject: constants.endpoints.http.REFRESH_AUTH,
+		handle: req => refresh.handle(req)
+	});
+	bus.subscribe({
+		subject: constants.endpoints.http.LOGOUT,
+		handle: req => logout.handle(req)
+	});
 
 	/**
 	 * SERVICE
 	 */
-	bus.subscribe(constants.endpoints.service.DECODE_TOKEN, (req) => decodeToken.handle(req));
-	bus.subscribe(constants.endpoints.service.GENERATE_TOKEN_FOR_USER_COOKIE, (req) => generateJWTToken.handle(req, true));
-	bus.subscribe(constants.endpoints.service.GENERATE_TOKEN_FOR_USER_TOKEN, (req) => generateJWTToken.handle(req, false));
-	bus.subscribe( /* deprecated */ "auth-service.generate-jwt-token-for-user.web", (req) => generateJWTToken.handle(req, true));
-	bus.subscribe( /* deprecated */ "auth-service.generate-jwt-token-for-user.app", (req) => generateJWTToken.handle(req, false));
+	bus.subscribe(constants.endpoints.service.DECODE_TOKEN, req => decodeToken.handle(req));
+	bus.subscribe(constants.endpoints.service.GENERATE_TOKEN_FOR_USER_COOKIE, req => generateJWTToken.handle(req, true));
+	bus.subscribe(constants.endpoints.service.GENERATE_TOKEN_FOR_USER_TOKEN, req => generateJWTToken.handle(req, false));
+	bus.subscribe( /* deprecated */ "auth-service.generate-jwt-token-for-user.web", req => generateJWTToken.handle(req, true));
+	bus.subscribe( /* deprecated */ "auth-service.generate-jwt-token-for-user.app", req => generateJWTToken.handle(req, false));
 
 	log.info("Auth service is up and running")
 };
