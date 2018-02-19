@@ -5,7 +5,7 @@ module.exports = {
   bus: parseArray(process.env.BUS) || ["nats://localhost:4222"],
 
   // Password min length
-  passwordMinLength: process.env.PASSWORD_MIN_LENGTH ||  6,
+  passwordMinLength: process.env.PASSWORD_MIN_LENGTH || 6,
 
   // Username min lengtn
   // Does not apply if login in with email address
@@ -17,8 +17,12 @@ module.exports = {
   // Attributes on user object to use in JWT token
   userAttrsWhitelist: parseArray(process.env.USER_ATTRS_WHITELIST) || ["id", "firstName", "lastName", "email", "scopes", "roles"],
 
+  // Name of jwt cookie
+  jwtCookieName: process.env.JWT_COOKIE_NAME || "jwt",
+
   // How long JWT cookie will survive
-  jwtCookieAge: process.env.JWT_COOKIE_AGE ||  "10d",
+  /**@type {String} */
+  jwtCookieAge: process.env.JWT_COOKIE_AGE || "10d",
 
   // Domain that JWT Cookie is valid for
   jwtCookieDomain: process.env.JWT_COOKIE_DOMAIN || null,
@@ -27,10 +31,12 @@ module.exports = {
   jwtCookieHttpOnly: (process.env.JWT_COOKIE_HTTP_ONLY || "true") == "true",
 
   // How long access token is valid
-  accessTokenTTL: process.env.ACCESS_TOKEN_TTL ||  "1d",
+  /** @type {String} */
+  accessTokenTTL: process.env.ACCESS_TOKEN_TTL || "1d",
 
   // How long a refresh token is valid
-  refreshTokenTTL: process.env.REFRESH_TOKEN_TTL ||  "365d",
+  /** @type {String} */
+  refreshTokenTTL: process.env.REFRESH_TOKEN_TTL || "365d",
 
   // Mongo database URL
   mongoUrl: process.env.MONGO_URL || "mongodb://localhost:27017/auth-service",
@@ -38,7 +44,7 @@ module.exports = {
   refreshTokenCollection: "refresh-tokens",
 
   userServiceGetUserSubject: process.env.USER_SERVICE_GET_USER_SUBJECT || "user-service.get-user"
-  
+
 };
 
 function parseArray(str) {

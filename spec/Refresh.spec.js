@@ -17,6 +17,7 @@ describe("Refresh", () => {
 		mongoUrl: "mongodb://localhost:27017/refresh-test",
 		service: authService,
 		bus: bus,
+		mockNats: true,
 		afterStart: (connection) => {
 			refreshTokenColl = connection.db.collection(constants.collection.refreshTokens);
 			return createMockRefreshTokens();			
