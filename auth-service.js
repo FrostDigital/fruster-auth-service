@@ -23,21 +23,6 @@ module.exports.start = async (busAddress, mongoUrl) => {
 	const generateJWTToken = new GenerateJWTToken(tokenLogin, cookieLogin);
 	const decodeToken = new DecodeToken();
 
-
-	bus.subscribe(constants.endpoints.http.LOGIN_WITH_COOKIE, (req) => cookieLogin.handle(req));
-	bus.subscribe(constants.endpoints.http.LOGIN_WITH_TOKEN, (req) => tokenLogin.handle(req));
-	bus.subscribe( /* deprecated */ "http.post.auth.web", (req) => cookieLogin.handle(req));
-	bus.subscribe( /* deprecated */ "http.post.auth.app", (req) => tokenLogin.handle(req));
-	bus.subscribe(constants.endpoints.http.REFRESH_AUTH, (req) => refresh.handle(req));
-	bus.subscribe(constants.endpoints.http.LOGOUT, (req) => logout.handle(req));
-
-
-	bus.subscribe(constants.endpoints.service.DECODE_TOKEN, (req) => decodeToken.handle(req));
-	bus.subscribe(constants.endpoints.service.GENERATE_TOKEN_FOR_USER_COOKIE, (req) => generateJWTToken.handle(req, true));
-	bus.subscribe(constants.endpoints.service.GENERATE_TOKEN_FOR_USER_TOKEN, (req) => generateJWTToken.handle(req, false));
-	bus.subscribe( /* deprecated */ "auth-service.generate-jwt-token-for-user.web", (req) => generateJWTToken.handle(req, true));
-	bus.subscribe( /* deprecated */ "auth-service.generate-jwt-token-for-user.app", (req) => generateJWTToken.handle(req, false));
-
 	/**
 	 * HTTP
 	 */
