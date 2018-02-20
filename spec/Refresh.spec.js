@@ -5,28 +5,28 @@ const bus = require("fruster-bus"),
 	authService = require("../auth-service"),
 	conf = require("../conf"),
 	uuid = require("uuid"),
-	errors = require("../errors"),
-	constants = require("../constants"),
+	errors = require("../lib/errors"),
+	constants = require("../lib/constants"),
 	testUtils = require("fruster-test-utils");
 
 
-describe("Token login service", () => {
+describe("Refresh", () => {
 	let refreshTokenColl;
 
 	testUtils.startBeforeEach({
-		mongoUrl: "mongodb://localhost:27017/auth-service-test",
+		mongoUrl: "mongodb://localhost:27017/refresh-test",
 		service: authService,
 		bus: bus,
 		mockNats: true,
-		afterStart: (connection) => {
+		afterStart: async (connection) => {
 			refreshTokenColl = connection.db.collection(constants.collection.refreshTokens);
-			return Promise.resolve();
+			await createMockRefreshTokens();
 		}
 	});
 
-	beforeEach(done => {
-
-		var refreshTokens = [{
+	async function createMockRefreshTokens() {
+		await refreshTokenColl.remove({});
+		const refreshTokens = [{
 			id: uuid.v4(),
 			userId: "userId",
 			token: "validToken",
@@ -46,73 +46,81 @@ describe("Token login service", () => {
 			expires: new Date(Date.now() + 1000 * 60)
 		}];
 
-		Promise.all(refreshTokens.map(o => refreshTokenColl.insert(o))).then(done);
-	});
+		await Promise.all(refreshTokens.map(o => refreshTokenColl.insert(o)));
+	}
 
-	it("should get new access token from refresh token", done => {
+	it("should get new access token from refresh token", async done => {
+		try {
+			const reqId = "a-req-id";
+			const encodedToken = jwt.encode({ foo: "bar" });
 
-		var reqId = "a-req-id";
-		var encodedToken = jwt.encode({
-			foo: "bar"
-		});
-
-		testUtils.mockService({
-			subject: conf.userServiceGetUserSubject,
-			data: [{
-				"id": "userId",
-				"firstName": "firstName",
-				"lastName": "lastName",
-				"mail": "mail"
-			}],
-			expectRequestData: {
-				id: "userId"
-			}
-		});
-
-		bus.request("http.post.auth.refresh", {
-				reqId: reqId,
-				data: {
-					refreshToken: "validToken"
-				}
-			})
-			.then(resp => {
-				var decodedAccessToken = jwt.decode(resp.data.accessToken);
-				expect(decodedAccessToken.id).toBe("userId");
-				done();
-			})
-			.catch(err => {
-				console.log(err);
-				done.fail();
+			testUtils.mockService({
+				subject: conf.userServiceGetUserSubject,
+				data: [{
+					id: "userId",
+					firstName: "firstName",
+					lastName: "lastName",
+					mail: "mail"
+				}]
 			});
-	});
 
-	it("should not get new access token from expired refresh token (expired by setting `expired=true`)", done => {
-		bus.request("http.post.auth.refresh", {
-				data: {
-					refreshToken: "expiredToken"
+			const resp = await bus.request({
+				subject: constants.endpoints.http.REFRESH_AUTH,
+				skipOptionsRequest: true,
+				message: {
+					reqId: reqId,
+					data: { refreshToken: "validToken" }
 				}
-			})
-			.then(done.fail)
-			.catch(resp => {
-				expect(resp.status).toBe(420);
-				expect(resp.error.code).toBe(errors.code.refreshTokenExpired);
-				done();
 			});
+
+			const decodedAccessToken = jwt.decode(resp.data.accessToken);
+			expect(decodedAccessToken.id).toBe("userId");
+
+			done();
+		} catch (err) {
+			log.error(err);
+			done.fail(err);
+		}
 	});
 
-	it("should not get new access token from expired refresh token (expired by date)", done => {
-		bus.request("http.post.auth.refresh", {
-				data: {
-					refreshToken: "expiredByDateToken"
+	it("should not get new access token from expired refresh token (expired by setting `expired=true`)", async done => {
+		try {
+			await bus.request({
+				subject: constants.endpoints.http.REFRESH_AUTH,
+				skipOptionsRequest: true,
+				message: {
+					reqId: uuid.v4(),
+					data: { refreshToken: "expiredToken" }
 				}
-			})
-			.then(done.fail)
-			.catch(resp => {
-				expect(resp.status).toBe(420);
-				expect(resp.error.code).toBe(errors.code.refreshTokenExpired);
-				done();
 			});
+
+			done.fail();
+		} catch (err) {
+			expect(err.status).toBe(420);
+			expect(err.error.code).toBe(errors.code.refreshTokenExpired);
+
+			done();
+		}
 	});
 
+	it("should not get new access token from expired refresh token (expired by date)", async done => {
+		try {
+			await bus.request({
+				subject: constants.endpoints.http.REFRESH_AUTH,
+				skipOptionsRequest: true,
+				message: {
+					reqId: uuid.v4(),
+					data: { refreshToken: "expiredByDateToken" }
+				}
+			});
+
+			done.fail();
+		} catch (err) {
+			expect(err.status).toBe(420);
+			expect(err.error.code).toBe(errors.code.refreshTokenExpired);
+
+			done();
+		}
+	});
 
 });

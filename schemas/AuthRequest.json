@@ -1,0 +1,17 @@
+{
+	"id": "AuthRequest",
+	"properties": {
+		"username": {
+			"type": "string",
+			"description": "Users username, could for example be an email"
+		},
+		"password": {
+			"type": "string",
+			"description": "Users password"
+		}
+	},
+	"required": [
+		"username",
+		"password"
+	]
+}
