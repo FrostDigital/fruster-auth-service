@@ -3,11 +3,11 @@
 	"properties": {
 		"username": {
 			"type": "string",
-			"description": "Users username, could for example be an email"
+			"description": "User's username, could for example be an email"
 		},
 		"password": {
 			"type": "string",
-			"description": "Users password"
+			"description": "User's password"
 		}
 	},
 	"required": [
