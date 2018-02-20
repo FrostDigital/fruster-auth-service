@@ -5,8 +5,8 @@ const bus = require("fruster-bus"),
 	authService = require("../auth-service"),
 	conf = require("../conf"),
 	uuid = require("uuid"),
-	errors = require("../errors"),
-	constants = require("../constants"),
+	errors = require("../lib/errors"),
+	constants = require("../lib/constants"),
 	testUtils = require("fruster-test-utils");
 
 describe("Cookie login", () => {
@@ -27,25 +27,26 @@ describe("Cookie login", () => {
 		testUtils.mockService({
 			subject: conf.userServiceGetUserSubject,
 			data: [{
-				id: "id", firstName: "firstName", lastName: "lastName", email: "email"
-			}],
-			expectMaxInvocation: 1
+				id: "id",
+				firstName: "firstName",
+				lastName: "lastName",
+				email: "email"
+			}]
 		});
 
 		testUtils.mockService({
-			subject: "user-service.validate-password",
+			subject: constants.consuming.VALIDATE_PASSWORD,
 			data: [{ id: "id" }],
-			expectMaxInvocation: 1,
-			expectData: {
-				username, password
-			}
+			expectData: { username, password }
 		});
 
 		try {
-			const resp = await bus.request("http.post.auth.web", {
-				reqId: reqId,
-				data: {
-					username, password
+			const resp = await bus.request({
+				subject: constants.endpoints.http.LOGIN_WITH_COOKIE,
+				skipOptionsRequest: true,
+				message: {
+					reqId: reqId,
+					data: { username, password }
 				}
 			});
 
@@ -81,25 +82,26 @@ describe("Cookie login", () => {
 		testUtils.mockService({
 			subject: conf.userServiceGetUserSubject,
 			data: [{
-				id: "id", firstName: "firstName", lastName: "lastName", email: "email"
-			}],
-			expectMaxInvocation: 1
+				id: "id",
+				firstName: "firstName",
+				lastName: "lastName",
+				email: "email"
+			}]
 		});
 
 		testUtils.mockService({
-			subject: "user-service.validate-password",
+			subject: constants.consuming.VALIDATE_PASSWORD,
 			data: [{ id: "id" }],
-			expectMaxInvocation: 1,
-			expectData: {
-				username, password
-			}
+			expectData: { username, password }
 		});
 
 		try {
-			const resp = await bus.request("http.post.auth.web", {
-				reqId: reqId,
-				data: {
-					username, password
+			const resp = await bus.request({
+				subject: constants.endpoints.http.LOGIN_WITH_COOKIE,
+				skipOptionsRequest: true,
+				message: {
+					reqId: reqId,
+					data: { username, password }
 				}
 			});
 
@@ -116,15 +118,20 @@ describe("Cookie login", () => {
 	it("should return 401 if invalid username or password", async done => {
 		const reqId = "a-req-id";
 
-		bus.subscribe("user-service.validate-password", req => {
+		bus.subscribe(constants.consuming.VALIDATE_PASSWORD, req => {
 			return { status: 401 };
 		});
 
 		try {
-			await bus.request("http.post.auth.web", {
-				reqId: reqId,
-				data: {
-					username: "joelsoderstrom", password: "ZlatansPonyTail"
+			await bus.request({
+				subject: constants.endpoints.http.LOGIN_WITH_COOKIE,
+				skipOptionsRequest: true,
+				message: {
+					reqId: reqId,
+					data: {
+						username: "joelsoderstrom",
+						password: "ZlatansPonyTail"
+					}
 				}
 			});
 
@@ -141,27 +148,27 @@ describe("Cookie login", () => {
 	it("should generate web JWT token for user", async done => {
 		bus.subscribe(conf.userServiceGetUserSubject, () => {
 			return {
-				"status": 200,
-				"data": [{
-					"roles": [
-						"admin"
-					],
-					"firstName": "firstName",
-					"middleName": "middleName",
-					"lastName": "lastName",
-					"email": "email",
-					"id": "id",
+				status: 200,
+				data: [{
+					roles: ["admin"],
+					firstName: "firstName",
+					middleName: "middleName",
+					lastName: "lastName",
+					email: "email",
+					id: "id",
 				}],
-				"error": {},
-				"reqId": "reqId"
+				error: {},
+				reqId: "reqId"
 			};
 		});
 
 		try {
-			const resp = await bus.request("auth-service.generate-jwt-token-for-user.web", {
-				reqId: "reqId",
-				data: {
-					firstName: "viktor"
+			const resp = await bus.request({
+				subject: constants.endpoints.service.GENERATE_TOKEN_FOR_USER_COOKIE,
+				skipOptionsRequest: true,
+				message: {
+					reqId: "reqId",
+					data: { firstName: "viktor" }
 				}
 			});
 
@@ -188,18 +195,20 @@ describe("Cookie login", () => {
 	it("should fail to generate web JWT token if user not found", async done => {
 		bus.subscribe(conf.userServiceGetUserSubject, () => {
 			return {
-				"status": 200,
-				"data": [],
-				"error": {},
-				"reqId": "reqId"
+				status: 200,
+				data: [],
+				error: {},
+				reqId: "reqId"
 			};
 		});
 
 		try {
-			const resp = await bus.request("auth-service.generate-jwt-token-for-user.web", {
-				reqId: "reqId",
-				data: {
-					firstName: "does not exist"
+			const resp = await bus.request({
+				subject: constants.endpoints.service.GENERATE_TOKEN_FOR_USER_COOKIE,
+				skipOptionsRequest: true,
+				message: {
+					reqId: "reqId",
+					data: { firstName: "does not exist" }
 				}
 			});
 
@@ -214,19 +223,23 @@ describe("Cookie login", () => {
 	it("should fail to generate web JWT token if multiple users found", async done => {
 		bus.subscribe(conf.userServiceGetUserSubject, () => {
 			return {
-				"status": 200,
-				"data": [
+				status: 200,
+				data: [
 					{ firstName: "fakeUser1" },
 					{ firstName: "fakeUser2" }
 				],
-				"error": {},
-				"reqId": "reqId"
+				error: {},
+				reqId: "reqId"
 			};
 		});
 		try {
-			const resp = await bus.request("auth-service.generate-jwt-token-for-user.web", {
-				reqId: "reqId",
-				data: { firstName: "does not exist" }
+			const resp = await bus.request({
+				subject: constants.endpoints.service.GENERATE_TOKEN_FOR_USER_COOKIE,
+				skipOptionsRequest: true,
+				message: {
+					reqId: "reqId",
+					data: { firstName: "does not exist" }
+				}
 			});
 
 			done.fail();
@@ -237,6 +250,5 @@ describe("Cookie login", () => {
 		}
 
 	});
-
 
 });

@@ -1,66 +1,112 @@
 const log = require("fruster-log");
 const bus = require("fruster-bus");
 const mongo = require("mongodb");
-const constants = require("./constants");
+const constants = require("./lib/constants");
 
 const RefreshTokenRepo = require("./lib/repos/RefreshTokenRepo");
-const CookieLogin = require("./lib/CookieLogin");
-const TokenLogin = require("./lib/TokenLogin");
-const Logout = require("./lib/Logout");
-const Refresh = require("./lib/Refresh");
-const DecodeToken = require("./lib/DecodeToken");
-const GenerateJWTToken = require("./lib/GenerateJWTToken");
+const CookieLoginHandler = require("./lib/handlers/CookieLoginHandler");
+const TokenLoginHandler = require("./lib/handlers/TokenLoginHandler");
+const LogoutHandler = require("./lib/handlers/LogoutHandler");
+const RefreshTokenHandler = require("./lib/handlers/RefreshTokenHandler");
+const DecodeTokenHandler = require("./lib/handlers/DecodeTokenHandler");
+const GenerateJWTTokenHandler = require("./lib/handlers/GenerateJWTTokenHandler");
+const docs = require('./lib/docs');
+
 
 module.exports.start = async (busAddress, mongoUrl) => {
 	await bus.connect(busAddress);
 	const db = await mongo.connect(mongoUrl);
 
+	const isCookie = true;
+	const isToken = false;
+
 	const refreshTokenRepo = new RefreshTokenRepo(db);
-	const logout = new Logout();
-	const cookieLogin = new CookieLogin();
-	const tokenLogin = new TokenLogin(refreshTokenRepo);
-	const refresh = new Refresh(refreshTokenRepo);
-	const generateJWTToken = new GenerateJWTToken(tokenLogin, cookieLogin);
-	const decodeToken = new DecodeToken();
+	const logoutHandler = new LogoutHandler();
+	const cookieLoginHandler = new CookieLoginHandler();
+	const tokenLoginHandler = new TokenLoginHandler(refreshTokenRepo);
+	const refreshTokenHandler = new RefreshTokenHandler(refreshTokenRepo);
+	const generateJWTTokenHandler = new GenerateJWTTokenHandler(tokenLoginHandler, cookieLoginHandler);
+	const decodeTokenHandler = new DecodeTokenHandler();
 
 	/**
 	 * HTTP
 	 */
 	bus.subscribe({
 		subject: constants.endpoints.http.LOGIN_WITH_COOKIE,
-		requestSchema: "authRequest"
-	}, req => cookieLogin.handle(req));
+		requestSchema: constants.schemas.request.AUTH_REQUEST,
+		docs: docs.http.LOGIN_WITH_COOKIE,
+		handle: req => cookieLoginHandler.handle(req)
+	});
 
 	bus.subscribe({
 		subject: constants.endpoints.http.LOGIN_WITH_TOKEN,
-		requestSchema: "authRequest",
-		responseSchema: "tokenAuthResponse"
-	}, req => tokenLogin.handle(req));
+		requestSchema: constants.schemas.request.AUTH_REQUEST,
+		responseSchema: constants.schemas.response.TOKEN_AUTH_RESPONSE,
+		docs: docs.http.LOGIN_WITH_TOKEN,
+	}, req => tokenLoginHandler.handle(req));
 
+	bus.subscribe({
+		subject: constants.endpoints.http.REFRESH_AUTH,
+		docs: docs.http.REFRESH_AUTH,
+		handle: req => refreshTokenHandler.handle(req)
+	});
+	bus.subscribe({
+		subject: constants.endpoints.http.LOGOUT,
+		docs: docs.http.LOGOUT,
+		handle: req => logoutHandler.handle(req)
+	});
+
+	/** DEPRECATED */
 	bus.subscribe({
 		subject: "http.post.auth.web",
-		requestSchema: "authRequest",
-		deprecated: `Use ${constants.endpoints.http.LOGIN_WITH_COOKIE} instead`
-	}, req => cookieLogin.handle(req));
-
+		requestSchema: constants.schemas.request.AUTH_REQUEST,
+		deprecated: `Use ${constants.endpoints.http.LOGIN_WITH_COOKIE} instead`,
+		handle: req => cookieLoginHandler.handle(req)
+	});
+	/** DEPRECATED */
 	bus.subscribe({
 		subject: "http.post.auth.app",
-		requestSchema: "authRequest",
-		responseSchema: "tokenAuthResponse",
-		deprecated: `Use ${constants.endpoints.http.LOGIN_WITH_TOKEN} instead`
-	}, req => tokenLogin.handle(req));
-
-	bus.subscribe(constants.endpoints.http.REFRESH_AUTH, req => refresh.handle(req));
-	bus.subscribe(constants.endpoints.http.LOGOUT, req => logout.handle(req));
+		requestSchema: constants.schemas.request.AUTH_REQUEST,
+		responseSchema: constants.schemas.response.TOKEN_AUTH_RESPONSE,
+		deprecated: `Use ${constants.endpoints.http.LOGIN_WITH_TOKEN} instead`,
+		handle: req => tokenLoginHandler.handle(req)
+	});
 
 	/**
 	 * SERVICE
 	 */
-	bus.subscribe(constants.endpoints.service.DECODE_TOKEN, req => decodeToken.handle(req));
-	bus.subscribe(constants.endpoints.service.GENERATE_TOKEN_FOR_USER_COOKIE, req => generateJWTToken.handle(req, true));
-	bus.subscribe(constants.endpoints.service.GENERATE_TOKEN_FOR_USER_TOKEN, req => generateJWTToken.handle(req, false));
-	bus.subscribe( /* deprecated */ "auth-service.generate-jwt-token-for-user.web", req => generateJWTToken.handle(req, true));
-	bus.subscribe( /* deprecated */ "auth-service.generate-jwt-token-for-user.app", req => generateJWTToken.handle(req, false));
+	bus.subscribe({
+		subject: constants.endpoints.service.DECODE_TOKEN,
+		requestSchema: constants.schemas.request.DECODE_TOKEN_REQUEST,
+		docs: docs.service.DECODE_TOKEN,
+		handle: req => decodeTokenHandler.handle(req)
+	});
+	bus.subscribe({
+		subject: constants.endpoints.service.GENERATE_TOKEN_FOR_USER_COOKIE,
+		requestSchema: constants.schemas.request.GENERATE_JWT_TOKEN_FOR_USER_REQUEST,
+		docs: docs.shared.GENERATE_TOKEN_FOR_USER,
+		handle: req => generateJWTTokenHandler.handle(req, isCookie)
+	});
+	bus.subscribe({
+		subject: constants.endpoints.service.GENERATE_TOKEN_FOR_USER_TOKEN,
+		requestSchema: constants.schemas.request.GENERATE_JWT_TOKEN_FOR_USER_REQUEST,
+		responseSchema: constants.schemas.response.TOKEN_AUTH_RESPONSE,
+		docs: docs.shared.GENERATE_TOKEN_FOR_USER,
+		handle: req => generateJWTTokenHandler.handle(req, isToken)
+	});
+
+	/** DEPRECATED */
+	bus.subscribe({
+		subject: "auth-service.generate-jwt-token-for-user.web",
+		deprecated: `Use ${constants.endpoints.service.GENERATE_TOKEN_FOR_USER_COOKIE} instead`,
+		handle: req => generateJWTTokenHandler.handle(req, isCookie)
+	});
+	/** DEPRECATED */
+	bus.subscribe({
+		subject: "auth-service.generate-jwt-token-for-user.app",
+		deprecated: `Use ${constants.endpoints.service.GENERATE_TOKEN_FOR_USER_TOKEN} instead`,
+		handle: req => generateJWTTokenHandler.handle(req, isToken)
+	});
 
 	log.info("Auth service is up and running")
 };

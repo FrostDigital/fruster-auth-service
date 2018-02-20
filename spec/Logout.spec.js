@@ -5,8 +5,8 @@ const bus = require("fruster-bus"),
 	authService = require("../auth-service"),
 	conf = require("../conf"),
 	uuid = require("uuid"),
-	errors = require("../errors"),
-	constants = require("../constants"),
+	errors = require("../lib/errors"),
+	constants = require("../lib/constants"),
 	testUtils = require("fruster-test-utils");
 
 describe("Logout", () => {
@@ -19,29 +19,40 @@ describe("Logout", () => {
 	});
 
 	it("should remove cookie after logout", async done => {
-		const reqId = "a-req-id";
-		const credentials = {
-			username: "joelsoderstrom",
-			password: "ZlatansPonyTail"
-		}
-
-		testUtils.mockService({
-			subject: conf.userServiceGetUserSubject,
-			data: [{
-				id: "id", firstName: "firstName", lastName: "lastName", email: "email"
-			}],
-			expectMaxInvocation: 1
-		});
-
-		testUtils.mockService({
-			subject: "user-service.validate-password",
-			data: { id: "id" },
-			expectData: credentials
-		});
-
 		try {
-			await bus.request("http.post.auth.web", { reqId: reqId, data: credentials });
-			const resp = await bus.request("http.post.auth.logout", { reqId: reqId });
+			const reqId = "a-req-id";
+			const credentials = {
+				username: "joelsoderstrom",
+				password: "ZlatansPonyTail"
+			}
+
+			testUtils.mockService({
+				subject: conf.userServiceGetUserSubject,
+				data: [{
+					id: "id",
+					firstName: "firstName",
+					lastName: "lastName",
+					email: "email"
+				}]
+			});
+
+			testUtils.mockService({
+				subject: constants.consuming.VALIDATE_PASSWORD,
+				data: { id: "id" },
+				expectData: credentials
+			});
+
+			await bus.request({
+				subject: constants.endpoints.http.LOGIN_WITH_COOKIE,
+				skipOptionsRequest: true,
+				message: { reqId, data: credentials }
+			});
+
+			const resp = await bus.request({
+				subject: constants.endpoints.http.LOGOUT,
+				skipOptionsRequest: true,
+				message: { reqId: reqId }
+			});
 
 			expect(resp.status).toBe(200);
 			expect(resp.reqId).toBe(reqId);
@@ -52,7 +63,7 @@ describe("Logout", () => {
 			done();
 		} catch (err) {
 			log.error(err);
-			done.fail();
+			done.fail(err);
 		}
 	});
 

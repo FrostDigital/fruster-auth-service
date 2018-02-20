@@ -1,5 +1,5 @@
 {
-	"id": "authRequest",
+	"id": "AuthRequest",
 	"properties": {
 		"username": {
 			"type": "string",
@@ -10,5 +10,8 @@
 			"description": "Users password"
 		}
 	},
-	"required": [ "username", "password" ]
+	"required": [
+		"username",
+		"password"
+	]
 }
