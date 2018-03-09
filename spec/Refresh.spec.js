@@ -83,6 +83,39 @@ describe("Refresh", () => {
 		}
 	});
 
+	it("should return 404 if user does not exist", async done => {
+		try {
+			const reqId = "a-req-id";
+			const encodedToken = jwt.encode({ foo: "bar" });
+
+			testUtils.mockService({
+				subject: conf.userServiceGetUserSubject,
+				data: []
+			});
+
+			try {
+				const resp = await bus.request({
+					subject: constants.endpoints.http.REFRESH_AUTH,
+					skipOptionsRequest: true,
+					message: {
+						reqId: reqId,
+						data: { refreshToken: "validToken" }
+					}
+				});
+
+				done.fail();
+			} catch (err) {
+				expect(err.status).toBe(404, "err.status");
+				expect(err.error.code).toBe(errors.userNotFound().error.code, "err.error.code");
+
+				done();
+			}
+		} catch (err) {
+			log.error(err);
+			done.fail(err);
+		}
+	});
+
 	it("should not get new access token from expired refresh token (expired by setting `expired=true`)", async done => {
 		try {
 			await bus.request({
