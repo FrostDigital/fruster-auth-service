@@ -1,13 +1,14 @@
-const bus = require("fruster-bus"),
-	cookie = require("cookie"),
-	log = require("fruster-log"),
-	jwt = require("../lib/utils/jwt"),
-	authService = require("../auth-service"),
-	conf = require("../conf"),
-	uuid = require("uuid"),
-	errors = require("../lib/errors"),
-	constants = require("../lib/constants"),
-	testUtils = require("fruster-test-utils");
+const bus = require("fruster-bus");
+const cookie = require("cookie");
+const log = require("fruster-log");
+const jwt = require("../lib/utils/jwt");
+const authService = require("../auth-service");
+const conf = require("../conf");
+const uuid = require("uuid");
+const errors = require("../lib/errors");
+const constants = require("../lib/constants");
+const testUtils = require("fruster-test-utils");
+const UserServiceClient = require("../lib/clients/UserServiceClient");
 
 
 describe("Token login service", () => {
@@ -19,7 +20,7 @@ describe("Token login service", () => {
 		bus: bus,
 		mockNats: true,
 		afterStart: (connection) => {
-			refreshTokenColl = connection.db.collection(constants.collection.refreshTokens);
+			refreshTokenColl = connection.db.collection(constants.collection.REFRESH_TOKENS);
 			return Promise.resolve();
 		}
 	});
@@ -30,7 +31,7 @@ describe("Token login service", () => {
 			const reqId = "a-req-id";
 
 			testUtils.mockService({
-				subject: conf.userServiceGetUserSubject,
+				subject: UserServiceClient.endpoints.GET_USER,
 				data: [{
 					id: "id",
 					firstName: "firstName",
@@ -40,10 +41,8 @@ describe("Token login service", () => {
 			});
 
 			testUtils.mockService({
-				subject: constants.consuming.VALIDATE_PASSWORD,
-				data: {
-					id: "id"
-				}
+				subject: UserServiceClient.endpoints.VALIDATE_PASSWORD,
+				data: { id: "id" }
 			});
 
 			const resp = await bus.request({
@@ -93,7 +92,7 @@ describe("Token login service", () => {
 			const reqId = "a-req-id";
 
 			bus.subscribe({
-				subject: constants.consuming.VALIDATE_PASSWORD,
+				subject: UserServiceClient.endpoints.VALIDATE_PASSWORD,
 				handle: req => {
 					return {
 						status: 401,
@@ -125,7 +124,7 @@ describe("Token login service", () => {
 		try {
 			const reqId = "a-req-id";
 
-			bus.subscribe(constants.consuming.VALIDATE_PASSWORD, req => {
+			bus.subscribe(UserServiceClient.endpoints.VALIDATE_PASSWORD, req => {
 				return {
 					status: 401,
 					reqId: req.reqId

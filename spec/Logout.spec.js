@@ -1,13 +1,15 @@
-const bus = require("fruster-bus"),
-	cookie = require("cookie"),
-	log = require("fruster-log"),
-	jwt = require("../lib/utils/jwt"),
-	authService = require("../auth-service"),
-	conf = require("../conf"),
-	uuid = require("uuid"),
-	errors = require("../lib/errors"),
-	constants = require("../lib/constants"),
-	testUtils = require("fruster-test-utils");
+const bus = require("fruster-bus");
+const cookie = require("cookie");
+const log = require("fruster-log");
+const jwt = require("../lib/utils/jwt");
+const authService = require("../auth-service");
+const conf = require("../conf");
+const uuid = require("uuid");
+const errors = require("../lib/errors");
+const constants = require("../lib/constants");
+const testUtils = require("fruster-test-utils");
+const UserServiceClient = require("../lib/clients/UserServiceClient");
+
 
 describe("Logout", () => {
 
@@ -27,7 +29,7 @@ describe("Logout", () => {
 			}
 
 			testUtils.mockService({
-				subject: conf.userServiceGetUserSubject,
+				subject: UserServiceClient.endpoints.GET_USER,
 				data: [{
 					id: "id",
 					firstName: "firstName",
@@ -37,7 +39,7 @@ describe("Logout", () => {
 			});
 
 			testUtils.mockService({
-				subject: constants.consuming.VALIDATE_PASSWORD,
+				subject: UserServiceClient.endpoints.VALIDATE_PASSWORD,
 				data: { id: "id" },
 				expectData: credentials
 			});

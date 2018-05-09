@@ -1,13 +1,15 @@
-const bus = require("fruster-bus"),
-	cookie = require("cookie"),
-	log = require("fruster-log"),
-	jwt = require("../lib/utils/jwt"),
-	authService = require("../auth-service"),
-	conf = require("../conf"),
-	uuid = require("uuid"),
-	errors = require("../lib/errors"),
-	constants = require("../lib/constants"),
-	testUtils = require("fruster-test-utils");
+const bus = require("fruster-bus");
+const cookie = require("cookie");
+const log = require("fruster-log");
+const jwt = require("../lib/utils/jwt");
+const authService = require("../auth-service");
+const conf = require("../conf");
+const uuid = require("uuid");
+const errors = require("../lib/errors");
+const constants = require("../lib/constants");
+const testUtils = require("fruster-test-utils");
+const UserServiceClient = require("../lib/clients/UserServiceClient");
+
 
 describe("Cookie login", () => {
 
@@ -25,7 +27,7 @@ describe("Cookie login", () => {
 		const password = "ZlatansPonyTail";
 
 		testUtils.mockService({
-			subject: conf.userServiceGetUserSubject,
+			subject: UserServiceClient.endpoints.GET_USER,
 			data: [{
 				id: "id",
 				firstName: "firstName",
@@ -35,7 +37,7 @@ describe("Cookie login", () => {
 		});
 
 		testUtils.mockService({
-			subject: constants.consuming.VALIDATE_PASSWORD,
+			subject: UserServiceClient.endpoints.VALIDATE_PASSWORD,
 			data: [{ id: "id" }],
 			expectData: { username, password }
 		});
@@ -80,7 +82,7 @@ describe("Cookie login", () => {
 		const password = "ZlatansPonyTail";
 
 		testUtils.mockService({
-			subject: conf.userServiceGetUserSubject,
+			subject: UserServiceClient.endpoints.GET_USER,
 			data: [{
 				id: "id",
 				firstName: "firstName",
@@ -90,7 +92,7 @@ describe("Cookie login", () => {
 		});
 
 		testUtils.mockService({
-			subject: constants.consuming.VALIDATE_PASSWORD,
+			subject: UserServiceClient.endpoints.VALIDATE_PASSWORD,
 			data: [{ id: "id" }],
 			expectData: { username, password }
 		});
@@ -118,7 +120,7 @@ describe("Cookie login", () => {
 	it("should return 401 if invalid username or password", async done => {
 		const reqId = "a-req-id";
 
-		bus.subscribe(constants.consuming.VALIDATE_PASSWORD, req => {
+		bus.subscribe(UserServiceClient.endpoints.VALIDATE_PASSWORD, req => {
 			return { status: 401 };
 		});
 
@@ -146,7 +148,7 @@ describe("Cookie login", () => {
 	});
 
 	it("should generate web JWT token for user", async done => {
-		bus.subscribe(conf.userServiceGetUserSubject, () => {
+		bus.subscribe(UserServiceClient.endpoints.GET_USER, () => {
 			return {
 				status: 200,
 				data: [{
@@ -193,7 +195,7 @@ describe("Cookie login", () => {
 	});
 
 	it("should fail to generate web JWT token if user not found", async done => {
-		bus.subscribe(conf.userServiceGetUserSubject, () => {
+		bus.subscribe(UserServiceClient.endpoints.GET_USER, () => {
 			return {
 				status: 200,
 				data: [],
@@ -221,7 +223,7 @@ describe("Cookie login", () => {
 	});
 
 	it("should fail to generate web JWT token if multiple users found", async done => {
-		bus.subscribe(conf.userServiceGetUserSubject, () => {
+		bus.subscribe(UserServiceClient.endpoints.GET_USER, () => {
 			return {
 				status: 200,
 				data: [

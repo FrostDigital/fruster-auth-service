@@ -1,13 +1,14 @@
-const bus = require("fruster-bus"),
-	cookie = require("cookie"),
-	log = require("fruster-log"),
-	jwt = require("../lib/utils/jwt"),
-	authService = require("../auth-service"),
-	conf = require("../conf"),
-	uuid = require("uuid"),
-	errors = require("../lib/errors"),
-	constants = require("../lib/constants"),
-	testUtils = require("fruster-test-utils");
+const bus = require("fruster-bus");
+const cookie = require("cookie");
+const log = require("fruster-log");
+const jwt = require("../lib/utils/jwt");
+const authService = require("../auth-service");
+const conf = require("../conf");
+const uuid = require("uuid");
+const errors = require("../lib/errors");
+const constants = require("../lib/constants");
+const testUtils = require("fruster-test-utils");
+const UserServiceClient = require("../lib/clients/UserServiceClient");
 
 
 describe("Refresh", () => {
@@ -19,7 +20,7 @@ describe("Refresh", () => {
 		bus: bus,
 		mockNats: true,
 		afterStart: async (connection) => {
-			refreshTokenColl = connection.db.collection(constants.collection.refreshTokens);
+			refreshTokenColl = connection.db.collection(constants.collection.REFRESH_TOKENS);
 			await createMockRefreshTokens();
 		}
 	});
@@ -55,7 +56,7 @@ describe("Refresh", () => {
 			const encodedToken = jwt.encode({ foo: "bar" });
 
 			testUtils.mockService({
-				subject: conf.userServiceGetUserSubject,
+				subject: UserServiceClient.endpoints.GET_USER,
 				data: [{
 					id: "userId",
 					firstName: "firstName",
@@ -89,7 +90,7 @@ describe("Refresh", () => {
 			const encodedToken = jwt.encode({ foo: "bar" });
 
 			testUtils.mockService({
-				subject: conf.userServiceGetUserSubject,
+				subject: UserServiceClient.endpoints.GET_USER,
 				data: []
 			});
 

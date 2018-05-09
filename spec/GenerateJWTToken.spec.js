@@ -9,6 +9,8 @@ const errors = require("../lib/errors");
 const constants = require("../lib/constants");
 const testUtils = require("fruster-test-utils");
 const RefreshTokenRepo = require("../lib/repos/RefreshTokenRepo");
+const UserServiceClient = require("../lib/clients/UserServiceClient");
+
 
 describe("Generate JWT token", () => {
 	let refreshTokenColl, refreshTokenRepo;
@@ -19,14 +21,14 @@ describe("Generate JWT token", () => {
 		bus: bus,
 		mockNats: true,
 		afterStart: (connection) => {
-			refreshTokenColl = connection.db.collection(constants.collection.refreshTokens);
+			refreshTokenColl = connection.db.collection(constants.collection.REFRESH_TOKENS);
 			refreshTokenRepo = new RefreshTokenRepo(connection.db);
 		}
 	});
 
 	it("should generate JWT token for token/app auth", async done => {
 		try {
-			bus.subscribe(conf.userServiceGetUserSubject, () => {
+			bus.subscribe(UserServiceClient.endpoints.GET_USER, () => {
 				return {
 					status: 200,
 					data: [{
@@ -81,7 +83,7 @@ describe("Generate JWT token", () => {
 
 	it("should generate JWT token for cookie/web auth", async done => {
 		try {
-			bus.subscribe(conf.userServiceGetUserSubject, () => {
+			bus.subscribe(UserServiceClient.endpoints.GET_USER, () => {
 				return {
 					status: 200,
 					data: [{
