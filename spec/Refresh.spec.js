@@ -1,7 +1,7 @@
 const bus = require("fruster-bus");
 const cookie = require("cookie");
 const log = require("fruster-log");
-const jwt = require("../lib/utils/jwt");
+const JWT = require("../lib/utils/JWT");
 const authService = require("../auth-service");
 const conf = require("../conf");
 const uuid = require("uuid");
@@ -53,7 +53,7 @@ describe("Refresh", () => {
 	it("should get new access token from refresh token", async done => {
 		try {
 			const reqId = "a-req-id";
-			const encodedToken = jwt.encode({ foo: "bar" });
+			const encodedToken = await JWT.encode({ foo: "bar" });
 
 			testUtils.mockService({
 				subject: UserServiceClient.endpoints.GET_USER,
@@ -74,7 +74,7 @@ describe("Refresh", () => {
 				}
 			});
 
-			const decodedAccessToken = jwt.decode(resp.data.accessToken);
+			const decodedAccessToken = await JWT.decode(resp.data.accessToken);
 			expect(decodedAccessToken.id).toBe("userId");
 
 			done();
@@ -87,7 +87,7 @@ describe("Refresh", () => {
 	it("should return 404 if user does not exist", async done => {
 		try {
 			const reqId = "a-req-id";
-			const encodedToken = jwt.encode({ foo: "bar" });
+			const encodedToken = await JWT.encode({ foo: "bar" });
 
 			testUtils.mockService({
 				subject: UserServiceClient.endpoints.GET_USER,

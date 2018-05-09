@@ -1,7 +1,7 @@
 const bus = require("fruster-bus");
 const cookie = require("cookie");
 const log = require("fruster-log");
-const jwt = require("../lib/utils/jwt");
+const JWT = require("../lib/utils/JWT");
 const authService = require("../auth-service");
 const conf = require("../conf");
 const uuid = require("uuid");
@@ -60,7 +60,7 @@ describe("Generate JWT token", () => {
 			expect(resp.data.profile.id).toBe("id");
 			expect(resp.data.profile.firstName).toBe("firstName");
 
-			const decodedJWT = jwt.decode(resp.data.accessToken);
+			const decodedJWT = JWT.decode(resp.data.accessToken);
 
 			expect(decodedJWT.id).toBe("id");
 			expect(decodedJWT.firstName).toBe("firstName");
@@ -113,7 +113,7 @@ describe("Generate JWT token", () => {
 			expect(resp.headers["Set-Cookie"]).toBeDefined();
 
 			const jwtCookie = cookie.parse(resp.headers["Set-Cookie"]).jwt;
-			const decodedJWT = jwt.decode(jwtCookie);
+			const decodedJWT = JWT.decode(jwtCookie);
 
 			expect(decodedJWT.id).toBe("id");
 			expect(decodedJWT.firstName).toBe("firstName");

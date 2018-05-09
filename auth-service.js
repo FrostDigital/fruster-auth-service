@@ -4,12 +4,16 @@ const mongo = require("mongodb");
 const constants = require("./lib/constants");
 
 const RefreshTokenRepo = require("./lib/repos/RefreshTokenRepo");
+const JWTTokenRepo = require("./lib/repos/JWTTokenRepo");
+const JWTManager = require("./lib/managers/JWTManager");
+
 const CookieLoginHandler = require("./lib/handlers/CookieLoginHandler");
 const TokenLoginHandler = require("./lib/handlers/TokenLoginHandler");
 const LogoutHandler = require("./lib/handlers/LogoutHandler");
 const RefreshTokenHandler = require("./lib/handlers/RefreshTokenHandler");
 const DecodeTokenHandler = require("./lib/handlers/DecodeTokenHandler");
 const GenerateJWTTokenHandler = require("./lib/handlers/GenerateJWTTokenHandler");
+
 const docs = require('./lib/docs');
 
 
@@ -21,12 +25,15 @@ module.exports.start = async (busAddress, mongoUrl) => {
 	const isToken = false;
 
 	const refreshTokenRepo = new RefreshTokenRepo(db);
-	const logoutHandler = new LogoutHandler();
-	const cookieLoginHandler = new CookieLoginHandler();
-	const tokenLoginHandler = new TokenLoginHandler(refreshTokenRepo);
-	const refreshTokenHandler = new RefreshTokenHandler(refreshTokenRepo);
+	const jwtTokenRepo = new JWTTokenRepo(db);
+	const jwtManager = new JWTManager(jwtTokenRepo);
+
+	const logoutHandler = new LogoutHandler(jwtManager);
+	const cookieLoginHandler = new CookieLoginHandler(jwtManager);
+	const tokenLoginHandler = new TokenLoginHandler(refreshTokenRepo, jwtManager);
+	const refreshTokenHandler = new RefreshTokenHandler(refreshTokenRepo, jwtManager);
 	const generateJWTTokenHandler = new GenerateJWTTokenHandler(tokenLoginHandler, cookieLoginHandler);
-	const decodeTokenHandler = new DecodeTokenHandler();
+	const decodeTokenHandler = new DecodeTokenHandler(jwtManager);
 
 	/**
 	 * HTTP

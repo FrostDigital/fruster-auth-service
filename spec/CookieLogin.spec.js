@@ -1,7 +1,7 @@
 const bus = require("fruster-bus");
 const cookie = require("cookie");
 const log = require("fruster-log");
-const jwt = require("../lib/utils/jwt");
+const JWT = require("../lib/utils/JWT");
 const authService = require("../auth-service");
 const conf = require("../conf");
 const uuid = require("uuid");
@@ -9,15 +9,32 @@ const errors = require("../lib/errors");
 const constants = require("../lib/constants");
 const testUtils = require("fruster-test-utils");
 const UserServiceClient = require("../lib/clients/UserServiceClient");
+const Db = require("mongodb").Db;
+const JWTManager = require("../lib/managers/JWTManager");
+const JWTTokenRepo = require("../lib/repos/JWTTokenRepo");
 
 
 describe("Cookie login", () => {
+
+	/** @type {Db} */
+	let db;
+
+	/** @type {JWTTokenRepo} */
+	let jwtTokenRepo;
+
+	/** @type {JWTManager} */
+	let jwtManager;
 
 	testUtils.startBeforeEach({
 		mongoUrl: "mongodb://localhost:27017/cookie-login-test",
 		service: authService,
 		bus: bus,
-		mockNats: true
+		mockNats: true,
+		afterStart: connection => {
+			db = connection.db;
+			jwtTokenRepo = new JWTTokenRepo(db);
+			jwtManager = new JWTManager(jwtTokenRepo);
+		}
 	});
 
 
@@ -59,7 +76,7 @@ describe("Cookie login", () => {
 			expect(resp.headers["Set-Cookie"]).toMatch("HttpOnly;");
 
 			const jwtCookie = cookie.parse(resp.headers["Set-Cookie"]).jwt;
-			const decodedJWT = jwt.decode(jwtCookie);
+			const decodedJWT = JWT.decode(jwtCookie);
 
 			expect(decodedJWT.id).toBe("id");
 			expect(decodedJWT.firstName).toBe("firstName");
@@ -179,7 +196,7 @@ describe("Cookie login", () => {
 			expect(resp.headers["Set-Cookie"]).toBeDefined();
 
 			const jwtCookie = cookie.parse(resp.headers["Set-Cookie"]).jwt;
-			const decodedJWT = jwt.decode(jwtCookie);
+			const decodedJWT = await jwtManager.decode(jwtCookie);
 
 			expect(decodedJWT.id).toBe("id");
 			expect(decodedJWT.firstName).toBe("firstName");

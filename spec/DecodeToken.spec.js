@@ -1,7 +1,7 @@
 const bus = require("fruster-bus");
 const cookie = require("cookie");
 const log = require("fruster-log");
-const jwt = require("../lib/utils/jwt");
+const JWT = require("../lib/utils/JWT");
 const authService = require("../auth-service");
 const conf = require("../conf");
 const uuid = require("uuid");
@@ -9,21 +9,38 @@ const errors = require("../lib/errors");
 const testUtils = require("fruster-test-utils");
 const mocks = require("./support/mocks");
 const constants = require('../lib/constants');
+const Db = require("mongodb").Db;
+const JWTManager = require("../lib/managers/JWTManager");
+const JWTTokenRepo = require("../lib/repos/JWTTokenRepo");
 
 
 describe("Decode and validate token", () => {
+
+	/** @type {Db} */
+	let db;
+
+	/** @type {JWTTokenRepo} */
+	let jwtTokenRepo;
+
+	/** @type {JWTManager} */
+	let jwtManager;
 
 	testUtils.startBeforeEach({
 		mongoUrl: "mongodb://localhost:27017/decode-token-test",
 		service: authService,
 		bus: bus,
-		mockNats: true
+		mockNats: true,
+		afterStart: connection => {
+			db = connection.db;
+			jwtTokenRepo = new JWTTokenRepo(db);
+			jwtManager = new JWTManager(jwtTokenRepo);
+		}
 	});
 
 	it("should decode jwt token", async done => {
 		try {
 			const reqId = "a-req-id";
-			const encodedToken = jwt.encode({ id: "userId" });
+			const encodedToken = await jwtManager.encode({ id: "userId" }, 5000);
 
 			mocks.getUsers([{ id: "userId", foo: "bar" }]);
 
@@ -49,7 +66,7 @@ describe("Decode and validate token", () => {
 	it("should fail to decode jwt token if user does not exist anymore", async done => {
 		try {
 			const reqId = "a-req-id";
-			const encodedToken = jwt.encode({ id: "userId" });
+			const encodedToken = await jwtManager.encode({ id: "userId" }, 5000);
 
 			mocks.getUsers([]);
 
@@ -58,7 +75,7 @@ describe("Decode and validate token", () => {
 					subject: constants.endpoints.service.DECODE_TOKEN,
 					skipOptionsRequest: true,
 					message: {
-						reqId: reqId,
+						reqId,
 						data: encodedToken
 					}
 				});
