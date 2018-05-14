@@ -1,7 +1,6 @@
 const bus = require("fruster-bus");
 const cookie = require("cookie");
 const log = require("fruster-log");
-const JWT = require("../lib/utils/JWT");
 const authService = require("../auth-service");
 const conf = require("../conf");
 const uuid = require("uuid");
@@ -11,7 +10,7 @@ const mocks = require("./support/mocks");
 const constants = require('../lib/constants');
 const Db = require("mongodb").Db;
 const JWTManager = require("../lib/managers/JWTManager");
-const JWTTokenRepo = require("../lib/repos/JWTTokenRepo");
+const SessionRepo = require("../lib/repos/SessionRepo");
 
 
 describe("Decode and validate token", () => {
@@ -19,8 +18,8 @@ describe("Decode and validate token", () => {
 	/** @type {Db} */
 	let db;
 
-	/** @type {JWTTokenRepo} */
-	let jwtTokenRepo;
+	/** @type {SessionRepo} */
+	let sessionRepo;
 
 	/** @type {JWTManager} */
 	let jwtManager;
@@ -32,8 +31,8 @@ describe("Decode and validate token", () => {
 		mockNats: true,
 		afterStart: connection => {
 			db = connection.db;
-			jwtTokenRepo = new JWTTokenRepo(db);
-			jwtManager = new JWTManager(jwtTokenRepo);
+			sessionRepo = new SessionRepo(db);
+			jwtManager = new JWTManager(sessionRepo);
 		}
 	});
 
@@ -139,6 +138,47 @@ describe("Decode and validate token", () => {
 			expect(err.error.detail).toBe("Token expired");
 
 			done();
+		}
+	});
+
+	it("should fail to decode jwt token if session has ended", async done => {
+		try {
+			const reqId = "a-req-id";
+			const user = {
+				id: "userId", scopes: ["system.logout"], roles: ["user"]
+			};
+			const encodedToken = await jwtManager.encode({ id: user.id }, 5000);
+
+			mocks.getUsers([]);
+
+			await bus.request({
+				subject: constants.endpoints.http.LOGOUT,
+				message: {
+					reqId, user,
+					headers: { authorization: `Bearer ${encodedToken}` }
+				}
+			});
+
+			try {
+				await bus.request({
+					subject: constants.endpoints.service.DECODE_TOKEN,
+					skipOptionsRequest: true,
+					message: {
+						reqId, data: encodedToken
+					}
+				});
+
+				done.fail();
+			} catch (err) {
+				expect(err.status).toBe(403);
+				expect(err.reqId).toBe(reqId);
+				expect(err.error.title).toBeDefined();
+
+				done();
+			}
+		} catch (err) {
+			log.error(err);
+			done.fail(err);
 		}
 	});
 

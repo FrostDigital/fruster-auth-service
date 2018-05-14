@@ -1,7 +1,6 @@
 const bus = require("fruster-bus");
 const cookie = require("cookie");
 const log = require("fruster-log");
-const JWT = require("../lib/utils/JWT");
 const authService = require("../auth-service");
 const conf = require("../conf");
 const uuid = require("uuid");
@@ -9,10 +8,20 @@ const errors = require("../lib/errors");
 const constants = require("../lib/constants");
 const testUtils = require("fruster-test-utils");
 const UserServiceClient = require("../lib/clients/UserServiceClient");
+const SessionRepo = require("../lib/repos/SessionRepo");
+const JWTManager = require("../lib/managers/JWTManager");
+const Db = require("mongodb").Db;
 
 
 describe("Token login service", () => {
+
 	let refreshTokenColl;
+	/** @type {Db} */
+	let db;
+	/** @type {SessionRepo} */
+	let sessionRepo;
+	/** @type {JWTManager} */
+	let jwtManager;
 
 	testUtils.startBeforeEach({
 		mongoUrl: "mongodb://localhost:27017/tokin-login-test",
@@ -20,7 +29,12 @@ describe("Token login service", () => {
 		bus: bus,
 		mockNats: true,
 		afterStart: (connection) => {
-			refreshTokenColl = connection.db.collection(constants.collection.REFRESH_TOKENS);
+			db = connection.db;
+			refreshTokenColl = db.collection(constants.collection.REFRESH_TOKENS);
+
+			sessionRepo = new SessionRepo(db);
+			jwtManager = new JWTManager(sessionRepo);
+
 			return Promise.resolve();
 		}
 	});
@@ -64,7 +78,7 @@ describe("Token login service", () => {
 			expect(resp.data.profile.id).toBe("id");
 			expect(resp.data.profile.firstName).toBe("firstName");
 
-			const decodedJWT = JWT.decode(resp.data.accessToken);
+			const decodedJWT = await jwtManager.decode(resp.data.accessToken);
 
 			expect(decodedJWT.id).toBe("id");
 			expect(decodedJWT.firstName).toBe("firstName");
