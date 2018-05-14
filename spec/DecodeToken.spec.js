@@ -62,6 +62,34 @@ describe("Decode and validate token", () => {
 		}
 	});
 
+	it("should decode old jwt tokens", async done => {
+		try {
+			const reqId = "a-req-id";
+			const encodedToken = await jwtManager.encode({ id: "userId" }, (-conf.accessTokenTTL) + 10);
+
+			await db.collection(constants.collection.SESSIONS).remove({ userId: "userId" });
+
+			mocks.getUsers([{ id: "userId", foo: "bar" }]);
+
+			const resp = await bus.request({
+				subject: constants.endpoints.service.DECODE_TOKEN,
+				skipOptionsRequest: true,
+				message: {
+					reqId: reqId,
+					data: encodedToken
+				}
+			});
+
+			expect(resp.data.foo).toBe("bar");
+			expect(resp.reqId).toBe(reqId);
+
+			done();
+		} catch (err) {
+			log.error(err);
+			done.fail(err);
+		}
+	});
+
 	it("should fail to decode jwt token if user does not exist anymore", async done => {
 		try {
 			const reqId = "a-req-id";
