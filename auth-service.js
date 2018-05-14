@@ -4,12 +4,16 @@ const mongo = require("mongodb");
 const constants = require("./lib/constants");
 
 const RefreshTokenRepo = require("./lib/repos/RefreshTokenRepo");
+const SessionRepo = require("./lib/repos/SessionRepo");
+const JWTManager = require("./lib/managers/JWTManager");
+
 const CookieLoginHandler = require("./lib/handlers/CookieLoginHandler");
 const TokenLoginHandler = require("./lib/handlers/TokenLoginHandler");
 const LogoutHandler = require("./lib/handlers/LogoutHandler");
 const RefreshTokenHandler = require("./lib/handlers/RefreshTokenHandler");
 const DecodeTokenHandler = require("./lib/handlers/DecodeTokenHandler");
 const GenerateJWTTokenHandler = require("./lib/handlers/GenerateJWTTokenHandler");
+
 const docs = require('./lib/docs');
 
 
@@ -21,12 +25,15 @@ module.exports.start = async (busAddress, mongoUrl) => {
 	const isToken = false;
 
 	const refreshTokenRepo = new RefreshTokenRepo(db);
-	const logoutHandler = new LogoutHandler();
-	const cookieLoginHandler = new CookieLoginHandler();
-	const tokenLoginHandler = new TokenLoginHandler(refreshTokenRepo);
-	const refreshTokenHandler = new RefreshTokenHandler(refreshTokenRepo);
+	const sessionRepo = new SessionRepo(db);
+	const jwtManager = new JWTManager(sessionRepo);
+
+	const logoutHandler = new LogoutHandler(jwtManager);
+	const cookieLoginHandler = new CookieLoginHandler(jwtManager);
+	const tokenLoginHandler = new TokenLoginHandler(refreshTokenRepo, jwtManager);
+	const refreshTokenHandler = new RefreshTokenHandler(refreshTokenRepo, jwtManager);
 	const generateJWTTokenHandler = new GenerateJWTTokenHandler(tokenLoginHandler, cookieLoginHandler);
-	const decodeTokenHandler = new DecodeTokenHandler();
+	const decodeTokenHandler = new DecodeTokenHandler(jwtManager);
 
 	/**
 	 * HTTP
@@ -50,6 +57,7 @@ module.exports.start = async (busAddress, mongoUrl) => {
 		docs: docs.http.REFRESH_AUTH,
 		handle: req => refreshTokenHandler.handle(req)
 	});
+
 	bus.subscribe({
 		subject: constants.endpoints.http.LOGOUT,
 		docs: docs.http.LOGOUT,
@@ -81,12 +89,14 @@ module.exports.start = async (busAddress, mongoUrl) => {
 		docs: docs.service.DECODE_TOKEN,
 		handle: req => decodeTokenHandler.handle(req)
 	});
+
 	bus.subscribe({
 		subject: constants.endpoints.service.GENERATE_TOKEN_FOR_USER_COOKIE,
 		requestSchema: constants.schemas.request.GENERATE_JWT_TOKEN_FOR_USER_REQUEST,
 		docs: docs.shared.GENERATE_TOKEN_FOR_USER,
 		handle: req => generateJWTTokenHandler.handle(req, isCookie)
 	});
+
 	bus.subscribe({
 		subject: constants.endpoints.service.GENERATE_TOKEN_FOR_USER_TOKEN,
 		requestSchema: constants.schemas.request.GENERATE_JWT_TOKEN_FOR_USER_REQUEST,
@@ -108,6 +118,6 @@ module.exports.start = async (busAddress, mongoUrl) => {
 		handle: req => generateJWTTokenHandler.handle(req, isToken)
 	});
 
-	log.info("Auth service is up and running")
-};
+	log.info("Auth service is up and running");
 
+};

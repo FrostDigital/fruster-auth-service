@@ -1,7 +1,6 @@
 const bus = require("fruster-bus");
 const cookie = require("cookie");
 const log = require("fruster-log");
-const jwt = require("../lib/utils/jwt");
 const authService = require("../auth-service");
 const conf = require("../conf");
 const uuid = require("uuid");
@@ -9,9 +8,25 @@ const errors = require("../lib/errors");
 const constants = require("../lib/constants");
 const testUtils = require("fruster-test-utils");
 const RefreshTokenRepo = require("../lib/repos/RefreshTokenRepo");
+const UserServiceClient = require("../lib/clients/UserServiceClient");
+const SessionRepo = require("../lib/repos/SessionRepo");
+const JWTManager = require("../lib/managers/JWTManager");
+const Db = require("mongodb").Db;
+
 
 describe("Generate JWT token", () => {
-	let refreshTokenColl, refreshTokenRepo;
+
+	/** @type {Db} */
+	let db;
+	let refreshTokenColl;
+
+	/** @type {RefreshTokenRepo} */
+	let refreshTokenRepo;
+
+	/** @type {SessionRepo} */
+	let sessionRepo;
+	/** @type {JWTManager} */
+	let jwtManager;
 
 	testUtils.startBeforeEach({
 		mongoUrl: "mongodb://localhost:27017/generate-jwt-token-test",
@@ -19,14 +34,18 @@ describe("Generate JWT token", () => {
 		bus: bus,
 		mockNats: true,
 		afterStart: (connection) => {
-			refreshTokenColl = connection.db.collection(constants.collection.refreshTokens);
-			refreshTokenRepo = new RefreshTokenRepo(connection.db);
+			db = connection.db;
+			refreshTokenColl = db.collection(constants.collection.REFRESH_TOKENS);
+			refreshTokenRepo = new RefreshTokenRepo(db);
+
+			sessionRepo = new SessionRepo(db);
+			jwtManager = new JWTManager(sessionRepo);
 		}
 	});
 
 	it("should generate JWT token for token/app auth", async done => {
 		try {
-			bus.subscribe(conf.userServiceGetUserSubject, () => {
+			bus.subscribe(UserServiceClient.endpoints.GET_USER, () => {
 				return {
 					status: 200,
 					data: [{
@@ -58,14 +77,14 @@ describe("Generate JWT token", () => {
 			expect(resp.data.profile.id).toBe("id");
 			expect(resp.data.profile.firstName).toBe("firstName");
 
-			const decodedJWT = jwt.decode(resp.data.accessToken);
+			const decodedJWT = await jwtManager.decode(resp.data.accessToken);
 
 			expect(decodedJWT.id).toBe("id");
 			expect(decodedJWT.firstName).toBe("firstName");
 			expect(decodedJWT.lastName).toBe("lastName");
 			expect(decodedJWT.email).toBe("email");
 
-			const token = await refreshTokenRepo.get(resp.data.refreshToken);
+			const token = await refreshTokenRepo.get(resp.data.refreshToken, false);
 
 			expect(token).toBeTruthy("should gotten refreshToken " + resp.data.refreshToken);
 			expect(token.userId).toBe("id");
@@ -81,7 +100,7 @@ describe("Generate JWT token", () => {
 
 	it("should generate JWT token for cookie/web auth", async done => {
 		try {
-			bus.subscribe(conf.userServiceGetUserSubject, () => {
+			bus.subscribe(UserServiceClient.endpoints.GET_USER, () => {
 				return {
 					status: 200,
 					data: [{
@@ -111,7 +130,7 @@ describe("Generate JWT token", () => {
 			expect(resp.headers["Set-Cookie"]).toBeDefined();
 
 			const jwtCookie = cookie.parse(resp.headers["Set-Cookie"]).jwt;
-			const decodedJWT = jwt.decode(jwtCookie);
+			const decodedJWT = await jwtManager.decode(jwtCookie);
 
 			expect(decodedJWT.id).toBe("id");
 			expect(decodedJWT.firstName).toBe("firstName");

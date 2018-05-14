@@ -1,17 +1,26 @@
-const bus = require("fruster-bus"),
-	cookie = require("cookie"),
-	log = require("fruster-log"),
-	jwt = require("../lib/utils/jwt"),
-	authService = require("../auth-service"),
-	conf = require("../conf"),
-	uuid = require("uuid"),
-	errors = require("../lib/errors"),
-	constants = require("../lib/constants"),
-	testUtils = require("fruster-test-utils");
+const bus = require("fruster-bus");
+const cookie = require("cookie");
+const log = require("fruster-log");
+const jwt = require("jwt-simple");
+const authService = require("../auth-service");
+const conf = require("../conf");
+const uuid = require("uuid");
+const errors = require("../lib/errors");
+const constants = require("../lib/constants");
+const testUtils = require("fruster-test-utils");
+const UserServiceClient = require("../lib/clients/UserServiceClient");
+const Db = require("mongodb").Db;
+const SessionRepo = require("../lib/repos/SessionRepo");
+const JWTManager = require("../lib/managers/JWTManager");
 
 
 describe("Refresh", () => {
+
+	/** @type {Db} */
+	let db;
+
 	let refreshTokenColl;
+
 
 	testUtils.startBeforeEach({
 		mongoUrl: "mongodb://localhost:27017/refresh-test",
@@ -19,7 +28,9 @@ describe("Refresh", () => {
 		bus: bus,
 		mockNats: true,
 		afterStart: async (connection) => {
-			refreshTokenColl = connection.db.collection(constants.collection.refreshTokens);
+			db = connection.db;
+
+			refreshTokenColl = db.collection(constants.collection.REFRESH_TOKENS);
 			await createMockRefreshTokens();
 		}
 	});
@@ -52,10 +63,10 @@ describe("Refresh", () => {
 	it("should get new access token from refresh token", async done => {
 		try {
 			const reqId = "a-req-id";
-			const encodedToken = jwt.encode({ foo: "bar" });
+			const encodedToken = jwt.encode({ foo: "bar" }, conf.secret);
 
 			testUtils.mockService({
-				subject: conf.userServiceGetUserSubject,
+				subject: UserServiceClient.endpoints.GET_USER,
 				data: [{
 					id: "userId",
 					firstName: "firstName",
@@ -73,7 +84,7 @@ describe("Refresh", () => {
 				}
 			});
 
-			const decodedAccessToken = jwt.decode(resp.data.accessToken);
+			const decodedAccessToken = jwt.decode(resp.data.accessToken, conf.secret);
 			expect(decodedAccessToken.id).toBe("userId");
 
 			done();
@@ -86,10 +97,10 @@ describe("Refresh", () => {
 	it("should return 404 if user does not exist", async done => {
 		try {
 			const reqId = "a-req-id";
-			const encodedToken = jwt.encode({ foo: "bar" });
+			const encodedToken = jwt.encode({ foo: "bar" }, conf.secret);
 
 			testUtils.mockService({
-				subject: conf.userServiceGetUserSubject,
+				subject: UserServiceClient.endpoints.GET_USER,
 				data: []
 			});
 
