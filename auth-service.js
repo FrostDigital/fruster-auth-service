@@ -120,4 +120,13 @@ module.exports.start = async (busAddress, mongoUrl) => {
 
 	log.info("Auth service is up and running");
 
+	createIndexes(db);
 };
+
+function createIndexes(db) {
+	db.collection(constants.collection.SESSIONS)
+		.createIndex({
+			userId: 1,
+			id: 1
+		});
+}
