@@ -129,4 +129,17 @@ function createIndexes(db) {
 			userId: 1,
 			id: 1
 		});
+
+	db.collection(constants.collection.SESSIONS)
+		.createIndex({
+			id: 1
+		},
+			{
+				unique: true,
+				partialFilterExpression: {
+					id: {
+						$exists: true
+					}
+				}
+			});
 }
