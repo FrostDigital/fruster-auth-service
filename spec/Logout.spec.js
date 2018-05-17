@@ -179,6 +179,58 @@ describe("Logout", () => {
 		}
 	});
 
+	it("should remove session after logout when logging out with Authorization token", async done => {
+		try {
+			const reqId = "a-req-id";
+			const credentials = {
+				username: "joelsoderstrom",
+				password: "ZlatansPonyTail"
+			}
+			const user = {
+				id: "id",
+				firstName: "firstName",
+				lastName: "lastName",
+				email: "email"
+			};
+
+			testUtils.mockService({
+				subject: UserServiceClient.endpoints.GET_USER,
+				data: [user]
+			});
+
+			testUtils.mockService({
+				subject: UserServiceClient.endpoints.VALIDATE_PASSWORD,
+				data: { id: "id" },
+				expectData: credentials
+			});
+
+			const loginResponse = await bus.request({
+				subject: constants.endpoints.http.LOGIN_WITH_TOKEN,
+				skipOptionsRequest: true,
+				message: { reqId, data: credentials }
+			});
+
+			let session = await db.collection(constants.collection.SESSIONS).findOne({ userId: user.id });
+
+			expect(session).toBeDefined("session from database before logout");
+
+			const resp = await bus.request({
+				subject: constants.endpoints.http.LOGOUT,
+				skipOptionsRequest: true,
+				message: { headers: { Authorization: `Bearer ${loginResponse.data.accessToken}` }, reqId, user }
+			});
+
+			session = await db.collection(constants.collection.SESSIONS).findOne({ userId: user.id });
+
+			expect(session).toBeNull("session from database after logout");
+
+			done();
+		} catch (err) {
+			log.error(err);
+			done.fail(err);
+		}
+	});
+
 	it("should remove all sessions after logout when logging out with logoutAll query", async done => {
 		try {
 			const reqId = "a-req-id";
