@@ -7,8 +7,8 @@ const RefreshTokenRepo = require("./lib/repos/RefreshTokenRepo");
 const SessionRepo = require("./lib/repos/SessionRepo");
 const JWTManager = require("./lib/managers/JWTManager");
 
-const CookieLoginHandler = require("./lib/handlers/CookieLoginHandler");
-const TokenLoginHandler = require("./lib/handlers/TokenLoginHandler");
+const CookieLoginHandler = require("./lib/handlers/login/CookieLoginHandler");
+const TokenLoginHandler = require("./lib/handlers/login/TokenLoginHandler");
 const LogoutHandler = require("./lib/handlers/LogoutHandler");
 const RefreshTokenHandler = require("./lib/handlers/RefreshTokenHandler");
 const DecodeTokenHandler = require("./lib/handlers/DecodeTokenHandler");
@@ -124,22 +124,11 @@ module.exports.start = async (busAddress, mongoUrl) => {
 };
 
 function createIndexes(db) {
+	/** Makes sure sessions expire and gets removed after the jwt token would have expired. */
 	db.collection(constants.collection.SESSIONS)
-		.createIndex({
-			userId: 1,
-			id: 1
-		});
-
+		.createIndex({ expires: 1 }, { expireAfterSeconds: 0 });
 	db.collection(constants.collection.SESSIONS)
-		.createIndex({
-			id: 1
-		},
-			{
-				unique: true,
-				partialFilterExpression: {
-					id: {
-						$exists: true
-					}
-				}
-			});
+		.createIndex({ userId: 1, id: 1 });
+	db.collection(constants.collection.SESSIONS)
+		.createIndex({ id: 1 }, { unique: true, partialFilterExpression: { id: { $exists: true } } });
 }

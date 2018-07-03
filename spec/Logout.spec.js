@@ -1,10 +1,6 @@
 const bus = require("fruster-bus");
-const cookie = require("cookie");
 const log = require("fruster-log");
 const authService = require("../auth-service");
-const conf = require("../conf");
-const uuid = require("uuid");
-const errors = require("../lib/errors");
 const constants = require("../lib/constants");
 const testUtils = require("fruster-test-utils");
 const UserServiceClient = require("../lib/clients/UserServiceClient");
@@ -36,12 +32,15 @@ describe("Logout", () => {
 
 			testUtils.mockService({
 				subject: UserServiceClient.endpoints.GET_USER,
-				data: [{
-					id: "id",
-					firstName: "firstName",
-					lastName: "lastName",
-					email: "email"
-				}]
+				data: {
+					users: [{
+						id: "id",
+						firstName: "firstName",
+						lastName: "lastName",
+						email: "email"
+					}],
+					totalCount: 1
+				}
 			});
 
 			testUtils.mockService({
@@ -91,7 +90,10 @@ describe("Logout", () => {
 
 			testUtils.mockService({
 				subject: UserServiceClient.endpoints.GET_USER,
-				data: [user]
+				data: {
+					users: [user],
+					totalCount: 1
+				}
 			});
 
 			testUtils.mockService({
@@ -143,7 +145,10 @@ describe("Logout", () => {
 
 			testUtils.mockService({
 				subject: UserServiceClient.endpoints.GET_USER,
-				data: [user]
+				data: {
+					users: [user],
+					totalCount: 1
+				}
 			});
 
 			testUtils.mockService({
@@ -162,7 +167,7 @@ describe("Logout", () => {
 
 			expect(session).toBeDefined("session from database before logout");
 
-			const resp = await bus.request({
+			await bus.request({
 				subject: constants.endpoints.http.LOGOUT,
 				skipOptionsRequest: true,
 				message: { headers: { authorization: `Bearer ${loginResponse.data.accessToken}` }, reqId, user }
@@ -195,7 +200,10 @@ describe("Logout", () => {
 
 			testUtils.mockService({
 				subject: UserServiceClient.endpoints.GET_USER,
-				data: [user]
+				data: {
+					users: [user],
+					totalCount: 1
+				}
 			});
 
 			testUtils.mockService({
@@ -247,7 +255,10 @@ describe("Logout", () => {
 
 			testUtils.mockService({
 				subject: UserServiceClient.endpoints.GET_USER,
-				data: [user]
+				data: {
+					users: [user],
+					totalCount: 1
+				}
 			});
 
 			testUtils.mockService({
@@ -273,7 +284,7 @@ describe("Logout", () => {
 
 			expect(sessions.length).toBe(10, "sessions from database before logout");
 
-			const resp = await bus.request({
+			await bus.request({
 				subject: constants.endpoints.http.LOGOUT,
 				skipOptionsRequest: true,
 				message: { reqId, user, query: { logoutAll: true } }
