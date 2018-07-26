@@ -1,41 +1,41 @@
 {
-    "name": "fruster-auth-service",
-    "version": "0.0.1",
-    "private": true,
-    "scripts": {
-        "start": "node ./app.js",
-        "test": "nyc --reporter=html --check-coverage --lines 90 node ./spec/support/jasmine-runner.js"
-    },
-    "dependencies": {
-        "crypto": "^1.0.1",
-        "csprng": "^0.1.2",
-        "fruster-bus": "^0.2.26",
-        "fruster-health": "0.0.12",
-        "fruster-log": "0.0.18",
-        "jwt-simple": "^0.5.1",
-        "lodash": "^4.16.6",
-        "mongodb": "^2.2.33",
-        "ms": "^0.7.2",
-        "npm": "^3.10.9",
-        "uuid": "^2.0.3",
-        "cookie": "^0.3.1"
-    },
-    "devDependencies": {
-        "fruster-test-utils": "^0.3.22",
-        "jasmine": "^2.8.0",
-        "jasmine-spec-reporter": "^2.7.0",
-        "nyc": "^11.4.1"
-    },
-    "engines": {
-        "node": "8.1.2"
-    },
-    "nyc": {
-        "exclude": [
-            "spec/*",
-            "lib/errors.js",
-            "lib/constants.js",
-            "lib/docs.js",
-            "conf.js"
-        ]
-    }
+	"name": "fruster-auth-service",
+	"version": "0.0.1",
+	"private": true,
+	"scripts": {
+		"start": "node ./app.js",
+		"test": "nyc --reporter=html --check-coverage --lines 90 node ./spec/support/jasmine-runner.js"
+	},
+	"dependencies": {
+		"crypto": "^1.0.1",
+		"csprng": "^0.1.2",
+		"fruster-bus": "^0.2.26",
+		"fruster-health": "0.0.12",
+		"fruster-log": "0.0.18",
+		"jwt-simple": "^0.5.1",
+		"lodash": "^4.17.10",
+		"mongodb": "^2.2.34",
+		"ms": "^2.1.1",
+		"npm": "^6.2.0",
+		"uuid": "^3.3.2",
+		"cookie": "^0.3.1"
+	},
+	"devDependencies": {
+		"fruster-test-utils": "^0.3.22",
+		"jasmine": "^3.1.0",
+		"jasmine-spec-reporter": "^4.2.1",
+		"nyc": "^12.0.2"
+	},
+	"engines": {
+		"node": "8.1.2"
+	},
+	"nyc": {
+		"exclude": [
+			"spec/*",
+			"lib/errors.js",
+			"lib/constants.js",
+			"lib/docs.js",
+			"conf.js"
+		]
+	}
 }
