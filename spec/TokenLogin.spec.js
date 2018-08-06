@@ -1,10 +1,6 @@
 const bus = require("fruster-bus");
-const cookie = require("cookie");
 const log = require("fruster-log");
 const authService = require("../auth-service");
-const conf = require("../conf");
-const uuid = require("uuid");
-const errors = require("../lib/errors");
 const constants = require("../lib/constants");
 const testUtils = require("fruster-test-utils");
 const UserServiceClient = require("../lib/clients/UserServiceClient");
@@ -46,12 +42,15 @@ describe("Token login service", () => {
 
 			testUtils.mockService({
 				subject: UserServiceClient.endpoints.GET_USER,
-				data: [{
-					id: "id",
-					firstName: "firstName",
-					lastName: "lastName",
-					email: "email"
-				}]
+				data: {
+					users: [{
+						id: "id",
+						firstName: "firstName",
+						lastName: "lastName",
+						email: "email"
+					}],
+					totalCount: 1
+				}
 			});
 
 			testUtils.mockService({
@@ -81,9 +80,6 @@ describe("Token login service", () => {
 			const decodedJWT = await jwtManager.decode(resp.data.accessToken);
 
 			expect(decodedJWT.id).toBe("id");
-			expect(decodedJWT.firstName).toBe("firstName");
-			expect(decodedJWT.lastName).toBe("lastName");
-			expect(decodedJWT.email).toBe("email");
 			expect(decodedJWT.exp).toBeDefined("exp");
 
 			const token = await refreshTokenColl.findOne({

@@ -10,8 +10,6 @@ const constants = require("../lib/constants");
 const testUtils = require("fruster-test-utils");
 const UserServiceClient = require("../lib/clients/UserServiceClient");
 const Db = require("mongodb").Db;
-const SessionRepo = require("../lib/repos/SessionRepo");
-const JWTManager = require("../lib/managers/JWTManager");
 
 
 describe("Refresh", () => {
@@ -67,12 +65,15 @@ describe("Refresh", () => {
 
 			testUtils.mockService({
 				subject: UserServiceClient.endpoints.GET_USER,
-				data: [{
-					id: "userId",
-					firstName: "firstName",
-					lastName: "lastName",
-					mail: "mail"
-				}]
+				data: {
+					users: [{
+						id: "userId",
+						firstName: "firstName",
+						lastName: "lastName",
+						mail: "mail"
+					}],
+					totalCount: 1
+				}
 			});
 
 			const resp = await bus.request({
@@ -101,7 +102,10 @@ describe("Refresh", () => {
 
 			testUtils.mockService({
 				subject: UserServiceClient.endpoints.GET_USER,
-				data: []
+				data: {
+					users: [],
+					totalCount: 0
+				}
 			});
 
 			try {
