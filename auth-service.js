@@ -55,6 +55,7 @@ module.exports.start = async (busAddress, mongoUrl) => {
 	bus.subscribe({
 		subject: constants.endpoints.http.REFRESH_AUTH,
 		docs: docs.http.REFRESH_AUTH,
+		requestSchema: constants.schemas.request.REFRESH_AUTH,
 		handle: req => refreshTokenHandler.handle(req)
 	});
 
