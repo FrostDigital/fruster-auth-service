@@ -9,7 +9,7 @@
 	"dependencies": {
 		"crypto": "^1.0.1",
 		"csprng": "^0.1.2",
-		"fruster-bus": "^0.3.0",
+		"fruster-bus": "^0.3.4",
 		"fruster-health": "0.0.13",
 		"fruster-log": "0.0.18",
 		"jwt-simple": "^0.5.5",
@@ -20,8 +20,9 @@
 		"cookie": "^0.3.1"
 	},
 	"devDependencies": {
+		"@types/mongodb": "2.2.19",
 		"fruster-test-utils": "^0.4.0",
-		"jasmine": "^3.2.0",
+		"jasmine": "^3.3.0",
 		"jasmine-spec-reporter": "^4.2.1",
 		"nyc": "^13.1.0"
 	},

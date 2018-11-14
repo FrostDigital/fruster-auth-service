@@ -13,12 +13,17 @@ const LogoutHandler = require("./lib/handlers/LogoutHandler");
 const RefreshTokenHandler = require("./lib/handlers/RefreshTokenHandler");
 const DecodeTokenHandler = require("./lib/handlers/DecodeTokenHandler");
 const GenerateJWTTokenHandler = require("./lib/handlers/GenerateJWTTokenHandler");
+const ConvertTokenToCookieHandler = require("./lib/handlers/ConvertTokenToCookieHandler");
+
 
 const docs = require('./lib/docs');
+const Db = require("mongodb").Db;
 
 
 module.exports.start = async (busAddress, mongoUrl) => {
 	await bus.connect(busAddress);
+
+	/** @type {Db}*/
 	const db = await mongo.connect(mongoUrl);
 
 	const isCookie = true;
@@ -31,6 +36,7 @@ module.exports.start = async (busAddress, mongoUrl) => {
 	const logoutHandler = new LogoutHandler(jwtManager);
 	const cookieLoginHandler = new CookieLoginHandler(jwtManager);
 	const tokenLoginHandler = new TokenLoginHandler(refreshTokenRepo, jwtManager);
+	const convertTokenToCookieHandler = new ConvertTokenToCookieHandler(jwtManager);
 	const refreshTokenHandler = new RefreshTokenHandler(refreshTokenRepo, jwtManager);
 	const generateJWTTokenHandler = new GenerateJWTTokenHandler(tokenLoginHandler, cookieLoginHandler);
 	const decodeTokenHandler = new DecodeTokenHandler(jwtManager);
@@ -51,6 +57,14 @@ module.exports.start = async (busAddress, mongoUrl) => {
 		responseSchema: constants.schemas.response.TOKEN_AUTH_RESPONSE,
 		docs: docs.http.LOGIN_WITH_TOKEN,
 	}, req => tokenLoginHandler.handle(req));
+
+	bus.subscribe({
+		subject: constants.endpoints.http.CONVERT_TOKEN_TO_COOKIE,
+		// requestSchema: constants.schemas.request.AUTH_REQUEST, // TODO:
+		// responseSchema: constants.schemas.response.TOKEN_AUTH_RESPONSE, // TODO:
+		// docs: docs.http.LOGIN_WITH_TOKEN, // TODO:
+		mustBeLoggedIn: true,
+	}, req => convertTokenToCookieHandler.handleHttp(req));
 
 	bus.subscribe({
 		subject: constants.endpoints.http.REFRESH_AUTH,
