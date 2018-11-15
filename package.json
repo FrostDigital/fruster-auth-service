@@ -12,6 +12,7 @@
 		"fruster-bus": "^0.3.4",
 		"fruster-health": "0.0.13",
 		"fruster-log": "0.0.18",
+		"fruster-errors": "0.1.2",
 		"jwt-simple": "^0.5.5",
 		"lodash": "^4.17.11",
 		"mongodb": "^2.2.34",
