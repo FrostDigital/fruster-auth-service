@@ -73,6 +73,7 @@ module.exports.start = async (busAddress, mongoUrl) => {
 
 	bus.subscribe({
 		subject: constants.endpoints.http.LOGOUT,
+		mustBeLoggedIn: true,
 		docs: docs.http.LOGOUT,
 		handle: req => logoutHandler.handle(req)
 	});
@@ -129,6 +130,14 @@ module.exports.start = async (busAddress, mongoUrl) => {
 		subject: "auth-service.generate-jwt-token-for-user.app",
 		deprecated: `Use ${constants.endpoints.service.GENERATE_TOKEN_FOR_USER_TOKEN} instead`,
 		handle: req => generateJWTTokenHandler.handle(req, isToken)
+	});
+
+	bus.subscribe({
+		subject: "http.get.hello",
+		mustBeLoggedIn: true,
+		handle: req => {
+			return { status: 200, data: req };
+		}
 	});
 
 	log.info("Auth service is up and running");

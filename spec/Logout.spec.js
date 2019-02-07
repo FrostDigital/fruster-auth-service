@@ -58,7 +58,7 @@ describe("Logout", () => {
 			const resp = await bus.request({
 				subject: constants.endpoints.http.LOGOUT,
 				skipOptionsRequest: true,
-				message: { reqId: reqId }
+				message: { reqId: reqId, user: { scopes: ["ola"] } }
 			});
 
 			expect(resp.status).toBe(200);
@@ -85,7 +85,8 @@ describe("Logout", () => {
 				id: "id",
 				firstName: "firstName",
 				lastName: "lastName",
-				email: "email"
+				email: "email",
+				scopes: ["ola"]
 			};
 
 			testUtils.mockService({
@@ -140,7 +141,8 @@ describe("Logout", () => {
 				id: "id",
 				firstName: "firstName",
 				lastName: "lastName",
-				email: "email"
+				email: "email",
+				scopes: ["ola"]
 			};
 
 			testUtils.mockService({
@@ -195,7 +197,8 @@ describe("Logout", () => {
 				id: "id",
 				firstName: "firstName",
 				lastName: "lastName",
-				email: "email"
+				email: "email",
+				scopes: ["ola"]
 			};
 
 			testUtils.mockService({
@@ -250,7 +253,8 @@ describe("Logout", () => {
 				id: "id",
 				firstName: "firstName",
 				lastName: "lastName",
-				email: "email"
+				email: "email",
+				scopes: ["ola"]
 			};
 
 			testUtils.mockService({
