@@ -132,14 +132,6 @@ module.exports.start = async (busAddress, mongoUrl) => {
 		handle: req => generateJWTTokenHandler.handle(req, isToken)
 	});
 
-	bus.subscribe({
-		subject: "http.get.hello",
-		mustBeLoggedIn: true,
-		handle: req => {
-			return { status: 200, data: req };
-		}
-	});
-
 	log.info("Auth service is up and running");
 
 	createIndexes(db);
