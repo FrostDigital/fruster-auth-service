@@ -73,6 +73,7 @@ module.exports.start = async (busAddress, mongoUrl) => {
 
 	bus.subscribe({
 		subject: constants.endpoints.http.LOGOUT,
+		mustBeLoggedIn: true,
 		docs: docs.http.LOGOUT,
 		handle: req => logoutHandler.handle(req)
 	});
