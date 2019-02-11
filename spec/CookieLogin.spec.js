@@ -3,8 +3,7 @@ const cookie = require("cookie");
 const log = require("fruster-log");
 const authService = require("../auth-service");
 const conf = require("../conf");
-const uuid = require("uuid");
-const errors = require("../lib/errors");
+const errors = require("../lib/deprecatedErrors");
 const constants = require("../lib/constants");
 const testUtils = require("fruster-test-utils");
 const UserServiceClient = require("../lib/clients/UserServiceClient");
@@ -12,6 +11,7 @@ const Db = require("mongodb").Db;
 const JWTManager = require("../lib/managers/JWTManager");
 const SessionRepo = require("../lib/repos/SessionRepo");
 const crypto = require("crypto");
+const SpecUtils = require("./support/SpecUtils");
 
 
 describe("Cookie login", () => {
@@ -37,6 +37,8 @@ describe("Cookie login", () => {
 		}
 	});
 
+	afterEach(() => SpecUtils.resetConfig());
+
 	it("should login and return JWT as cookie", async done => {
 		const reqId = "a-req-id";
 		const username = "joelsoderstrom";
@@ -44,12 +46,15 @@ describe("Cookie login", () => {
 
 		testUtils.mockService({
 			subject: UserServiceClient.endpoints.GET_USER,
-			data: [{
-				id: "id",
-				firstName: "firstName",
-				lastName: "lastName",
-				email: "email"
-			}]
+			data: {
+				users: [{
+					id: "id",
+					firstName: "firstName",
+					lastName: "lastName",
+					email: "email"
+				}],
+				totalCount: 1
+			}
 		});
 
 		testUtils.mockService({
@@ -78,12 +83,76 @@ describe("Cookie login", () => {
 			const decodedJWT = await jwtManager.decode(jwtCookie);
 
 			expect(decodedJWT.id).toBe("id");
-			expect(decodedJWT.firstName).toBe("firstName");
-			expect(decodedJWT.lastName).toBe("lastName");
-			expect(decodedJWT.email).toBe("email");
 			expect(decodedJWT.exp).toBeDefined();
 
 			done();
+		} catch (err) {
+			log.error(err);
+			done.fail();
+		}
+	});
+
+	it("should use legacy get user call if custom endpoint is configured", async done => {
+		try {
+			const getUserSubject = "get-user-from-finland";
+			conf.userServiceGetUserSubject = getUserSubject
+
+			const username = "joelsoderstrom";
+			const password = "ZlatansPonyTail";
+
+			testUtils.mockService({
+				expectRequest: (req) => {
+					expect(req.data.id).toBeDefined("req.data.id");
+
+					done();
+				},
+				data: { users: [{}] },
+				subject: getUserSubject
+			});
+
+			testUtils.mockService({
+				subject: UserServiceClient.endpoints.VALIDATE_PASSWORD,
+				data: { id: "id" },
+				expectData: { username, password }
+			});
+
+			await bus.request({
+				subject: constants.endpoints.http.LOGIN_WITH_COOKIE,
+				skipOptionsRequest: true,
+				message: { reqId: "reqId", data: { username, password } }
+			});
+		} catch (err) {
+			log.error(err);
+			done.fail();
+		}
+	});
+
+	it("should use updated get user call if custom endpoint is not configured", async done => {
+		try {
+			const username = "joelsoderstrom";
+			const password = "ZlatansPonyTail";
+
+			testUtils.mockService({
+				expectRequest: (req) => {
+					expect(req.data.query.id).toBeDefined("req.data.query.id");
+
+					done();
+				},
+				data: { users: [{}] },
+				subject: conf.userServiceGetUserSubject
+			});
+
+			testUtils.mockService({
+				subject: UserServiceClient.endpoints.VALIDATE_PASSWORD,
+				data: { id: "id" },
+				expectData: { username, password }
+			});
+
+			await bus.request({
+				subject: constants.endpoints.http.LOGIN_WITH_COOKIE,
+				skipOptionsRequest: true,
+				message: { reqId: "reqId", data: { username, password } }
+			});
 		} catch (err) {
 			log.error(err);
 			done.fail();
@@ -99,12 +168,15 @@ describe("Cookie login", () => {
 
 		testUtils.mockService({
 			subject: UserServiceClient.endpoints.GET_USER,
-			data: [{
-				id: "id",
-				firstName: "firstName",
-				lastName: "lastName",
-				email: "email"
-			}]
+			data: {
+				users: [{
+					id: "id",
+					firstName: "firstName",
+					lastName: "lastName",
+					email: "email"
+				}],
+				totalCount: 1
+			}
 		});
 
 		testUtils.mockService({
@@ -133,6 +205,57 @@ describe("Cookie login", () => {
 		}
 	});
 
+	it("should login and return a user profile", async done => {
+		const reqId = "a-req-id";
+		const username = "joelsoderstrom";
+		const password = "ZlatansPonyTail";
+		const userData = {
+			id: "id",
+			email: "email",
+			profile: {
+				firstName: "firstName",
+				lastName: "lastName",
+				thisShouldNotBeReturned: "ok!"
+			}
+		};
+
+		testUtils.mockService({
+			subject: UserServiceClient.endpoints.GET_USER,
+			data: {
+				users: [userData],
+				totalCount: 1
+			}
+		});
+
+		testUtils.mockService({
+			subject: UserServiceClient.endpoints.VALIDATE_PASSWORD,
+			data: [{ id: "id" }],
+			expectData: { username, password }
+		});
+
+		try {
+			const resp = await bus.request({
+				subject: constants.endpoints.http.LOGIN_WITH_COOKIE,
+				skipOptionsRequest: true,
+				message: {
+					reqId: reqId,
+					data: { username, password }
+				}
+			});
+
+			expect(resp.data.email).toBe(userData.email, "resp.data.email");
+			expect(resp.data.id).toBe(userData.id, "resp.data.id");
+			expect(resp.data.profile.firstName).toBe(userData.profile.firstName, "resp.data.profile.firstName");
+			expect(resp.data.profile.lastName).toBe(userData.profile.lastName, "resp.data.profile.lastName");
+			expect(resp.data.profile.thisShouldNotBeReturned).toBeUndefined("resp.data.profile.thisShouldNotBeReturned");
+
+			done();
+		} catch (err) {
+			log.error(err);
+			done.fail();
+		}
+	});
+
 	it("should save record of active session in database when logging in", async done => {
 		const reqId = "a-req-id";
 		const username = "joelsoderstrom";
@@ -147,7 +270,10 @@ describe("Cookie login", () => {
 
 		testUtils.mockService({
 			subject: UserServiceClient.endpoints.GET_USER,
-			data: [user]
+			data: {
+				users: [user],
+				totalCount: 1
+			}
 		});
 
 		testUtils.mockService({
@@ -170,11 +296,10 @@ describe("Cookie login", () => {
 
 			expect(session).toBeDefined("session");
 
-			const cookies = cookie.parse(resp.headers["Set-Cookie"]);
 			const jwtCookie = cookie.parse(resp.headers["Set-Cookie"])[conf.jwtCookieName];
 			const decodedJWT = await jwtManager.decode(jwtCookie);
 
-			expect(session.id).toBe(crypto.createHmac("sha512", `${decodedJWT.exp} ${user.id}`).digest("hex"));
+			expect(session.id).toBe(crypto.createHmac("sha512", `${decodedJWT.exp} ${user.id}${decodedJWT.salt}`).digest("hex"));
 
 			done();
 		} catch (err) {
@@ -213,18 +338,21 @@ describe("Cookie login", () => {
 		}
 	});
 
-	it("should generate web JWT token for user", async done => {
+	it("should generate cookie JWT token for user", async done => {
 		bus.subscribe(UserServiceClient.endpoints.GET_USER, () => {
 			return {
 				status: 200,
-				data: [{
-					roles: ["admin"],
-					firstName: "firstName",
-					middleName: "middleName",
-					lastName: "lastName",
-					email: "email",
-					id: "id",
-				}],
+				data: {
+					users: [{
+						roles: ["admin"],
+						firstName: "firstName",
+						middleName: "middleName",
+						lastName: "lastName",
+						email: "email",
+						id: "id",
+					}],
+					totalCount: 1
+				},
 				error: {},
 				reqId: "reqId"
 			};
@@ -248,9 +376,6 @@ describe("Cookie login", () => {
 			const decodedJWT = await jwtManager.decode(jwtCookie);
 
 			expect(decodedJWT.id).toBe("id");
-			expect(decodedJWT.firstName).toBe("firstName");
-			expect(decodedJWT.lastName).toBe("lastName");
-			expect(decodedJWT.email).toBe("email");
 			expect(decodedJWT.exp).toBeDefined();
 
 			done();
@@ -260,18 +385,21 @@ describe("Cookie login", () => {
 		}
 	});
 
-	it("should fail to generate web JWT token if user not found", async done => {
+	it("should fail to generate cookie JWT token if user not found", async done => {
 		bus.subscribe(UserServiceClient.endpoints.GET_USER, () => {
 			return {
 				status: 200,
-				data: [],
+				data: {
+					users: [],
+					totalCount: 0
+				},
 				error: {},
 				reqId: "reqId"
 			};
 		});
 
 		try {
-			const resp = await bus.request({
+			await bus.request({
 				subject: constants.endpoints.service.GENERATE_TOKEN_FOR_USER_COOKIE,
 				skipOptionsRequest: true,
 				message: {
@@ -289,21 +417,24 @@ describe("Cookie login", () => {
 		}
 	});
 
-	it("should fail to generate web JWT token if multiple users found", async done => {
+	it("should fail to generate cookie JWT token if multiple users found", async done => {
 		bus.subscribe(UserServiceClient.endpoints.GET_USER, () => {
 			return {
 				status: 200,
-				data: [
-					{ firstName: "fakeUser1" },
-					{ firstName: "fakeUser2" }
-				],
+				data: {
+					users: [
+						{ firstName: "fakeUser1" },
+						{ firstName: "fakeUser2" }
+					],
+					totalCount: 2
+				},
 				error: {},
 				reqId: "reqId"
 			};
 		});
 
 		try {
-			const resp = await bus.request({
+			await bus.request({
 				subject: constants.endpoints.service.GENERATE_TOKEN_FOR_USER_COOKIE,
 				skipOptionsRequest: true,
 				message: {

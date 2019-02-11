@@ -80,9 +80,6 @@ describe("Refresh token repo", () => {
 	});
 
 	it("should fail to expire refresh token if it does not exist", async done => {
-		const ttlMs = 1000;
-		const userId = "userId";
-
 		try {
 			await repo.expire("fake token");
 		} catch (err) {
