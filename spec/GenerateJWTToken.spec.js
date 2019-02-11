@@ -2,9 +2,6 @@ const bus = require("fruster-bus");
 const cookie = require("cookie");
 const log = require("fruster-log");
 const authService = require("../auth-service");
-const conf = require("../conf");
-const uuid = require("uuid");
-const errors = require("../lib/errors");
 const constants = require("../lib/constants");
 const testUtils = require("fruster-test-utils");
 const RefreshTokenRepo = require("../lib/repos/RefreshTokenRepo");
@@ -18,7 +15,6 @@ describe("Generate JWT token", () => {
 
 	/** @type {Db} */
 	let db;
-	let refreshTokenColl;
 
 	/** @type {RefreshTokenRepo} */
 	let refreshTokenRepo;
@@ -35,7 +31,6 @@ describe("Generate JWT token", () => {
 		mockNats: true,
 		afterStart: (connection) => {
 			db = connection.db;
-			refreshTokenColl = db.collection(constants.collection.REFRESH_TOKENS);
 			refreshTokenRepo = new RefreshTokenRepo(db);
 
 			sessionRepo = new SessionRepo(db);
@@ -48,14 +43,17 @@ describe("Generate JWT token", () => {
 			bus.subscribe(UserServiceClient.endpoints.GET_USER, () => {
 				return {
 					status: 200,
-					data: [{
-						roles: ["admin"],
-						firstName: "firstName",
-						middleName: "middleName",
-						lastName: "lastName",
-						email: "email",
-						id: "id",
-					}],
+					data: {
+						users: [{
+							roles: ["admin"],
+							firstName: "firstName",
+							middleName: "middleName",
+							lastName: "lastName",
+							email: "email",
+							id: "id",
+						}],
+						totalCount: 1
+					},
 					error: {},
 					reqId: "reqId"
 				};
@@ -80,10 +78,6 @@ describe("Generate JWT token", () => {
 			const decodedJWT = await jwtManager.decode(resp.data.accessToken);
 
 			expect(decodedJWT.id).toBe("id");
-			expect(decodedJWT.firstName).toBe("firstName");
-			expect(decodedJWT.lastName).toBe("lastName");
-			expect(decodedJWT.email).toBe("email");
-
 			const token = await refreshTokenRepo.get(resp.data.refreshToken, false);
 
 			expect(token).toBeTruthy("should gotten refreshToken " + resp.data.refreshToken);
@@ -103,14 +97,17 @@ describe("Generate JWT token", () => {
 			bus.subscribe(UserServiceClient.endpoints.GET_USER, () => {
 				return {
 					status: 200,
-					data: [{
-						roles: ["admin"],
-						firstName: "firstName",
-						middleName: "middleName",
-						lastName: "lastName",
-						email: "email",
-						id: "id",
-					}],
+					data: {
+						users: [{
+							roles: ["admin"],
+							firstName: "firstName",
+							middleName: "middleName",
+							lastName: "lastName",
+							email: "email",
+							id: "id",
+						}],
+						totalCount: 1
+					},
 					error: {},
 					reqId: "reqId"
 				};
@@ -133,9 +130,6 @@ describe("Generate JWT token", () => {
 			const decodedJWT = await jwtManager.decode(jwtCookie);
 
 			expect(decodedJWT.id).toBe("id");
-			expect(decodedJWT.firstName).toBe("firstName");
-			expect(decodedJWT.lastName).toBe("lastName");
-			expect(decodedJWT.email).toBe("email");
 			expect(decodedJWT.exp).toBeDefined();
 
 			done();

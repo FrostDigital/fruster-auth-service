@@ -7,18 +7,23 @@ const RefreshTokenRepo = require("./lib/repos/RefreshTokenRepo");
 const SessionRepo = require("./lib/repos/SessionRepo");
 const JWTManager = require("./lib/managers/JWTManager");
 
-const CookieLoginHandler = require("./lib/handlers/CookieLoginHandler");
-const TokenLoginHandler = require("./lib/handlers/TokenLoginHandler");
+const CookieLoginHandler = require("./lib/handlers/login/CookieLoginHandler");
+const TokenLoginHandler = require("./lib/handlers/login/TokenLoginHandler");
 const LogoutHandler = require("./lib/handlers/LogoutHandler");
 const RefreshTokenHandler = require("./lib/handlers/RefreshTokenHandler");
 const DecodeTokenHandler = require("./lib/handlers/DecodeTokenHandler");
 const GenerateJWTTokenHandler = require("./lib/handlers/GenerateJWTTokenHandler");
+const ConvertTokenToCookieHandler = require("./lib/handlers/ConvertTokenToCookieHandler");
+
 
 const docs = require('./lib/docs');
+const Db = require("mongodb").Db;
 
 
 module.exports.start = async (busAddress, mongoUrl) => {
 	await bus.connect(busAddress);
+
+	/** @type {Db}*/
 	const db = await mongo.connect(mongoUrl);
 
 	const isCookie = true;
@@ -31,6 +36,7 @@ module.exports.start = async (busAddress, mongoUrl) => {
 	const logoutHandler = new LogoutHandler(jwtManager);
 	const cookieLoginHandler = new CookieLoginHandler(jwtManager);
 	const tokenLoginHandler = new TokenLoginHandler(refreshTokenRepo, jwtManager);
+	const convertTokenToCookieHandler = new ConvertTokenToCookieHandler(jwtManager);
 	const refreshTokenHandler = new RefreshTokenHandler(refreshTokenRepo, jwtManager);
 	const generateJWTTokenHandler = new GenerateJWTTokenHandler(tokenLoginHandler, cookieLoginHandler);
 	const decodeTokenHandler = new DecodeTokenHandler(jwtManager);
@@ -53,13 +59,21 @@ module.exports.start = async (busAddress, mongoUrl) => {
 	}, req => tokenLoginHandler.handle(req));
 
 	bus.subscribe({
+		subject: constants.endpoints.http.CONVERT_TOKEN_TO_COOKIE,
+		mustBeLoggedIn: true,
+		docs: docs.http.CONVERT_TOKEN_TO_COOKIE,
+	}, req => convertTokenToCookieHandler.handleHttp(req));
+
+	bus.subscribe({
 		subject: constants.endpoints.http.REFRESH_AUTH,
 		docs: docs.http.REFRESH_AUTH,
+		requestSchema: constants.schemas.request.REFRESH_AUTH,
 		handle: req => refreshTokenHandler.handle(req)
 	});
 
 	bus.subscribe({
 		subject: constants.endpoints.http.LOGOUT,
+		mustBeLoggedIn: true,
 		docs: docs.http.LOGOUT,
 		handle: req => logoutHandler.handle(req)
 	});
@@ -124,22 +138,11 @@ module.exports.start = async (busAddress, mongoUrl) => {
 };
 
 function createIndexes(db) {
+	/** Makes sure sessions expire and gets removed after the jwt token would have expired. */
 	db.collection(constants.collection.SESSIONS)
-		.createIndex({
-			userId: 1,
-			id: 1
-		});
-
+		.createIndex({ expires: 1 }, { expireAfterSeconds: 0 });
 	db.collection(constants.collection.SESSIONS)
-		.createIndex({
-			id: 1
-		},
-			{
-				unique: true,
-				partialFilterExpression: {
-					id: {
-						$exists: true
-					}
-				}
-			});
+		.createIndex({ userId: 1, id: 1 });
+	db.collection(constants.collection.SESSIONS)
+		.createIndex({ id: 1 }, { unique: true, partialFilterExpression: { id: { $exists: true } } });
 }
