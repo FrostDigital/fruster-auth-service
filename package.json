@@ -9,7 +9,7 @@
 	"dependencies": {
 		"crypto": "^1.0.1",
 		"csprng": "^0.1.2",
-		"fruster-bus": "^0.3.4",
+		"fruster-bus": "^0.5.3",
 		"fruster-health": "0.0.13",
 		"fruster-log": "0.0.18",
 		"fruster-errors": "0.1.2",
@@ -23,7 +23,7 @@
 	"devDependencies": {
 		"@types/mongodb": "2.2.19",
 		"fruster-test-utils": "^0.4.0",
-		"jasmine": "^3.3.0",
+		"jasmine": "^3.3.1",
 		"jasmine-spec-reporter": "^4.2.1",
 		"nyc": "^13.1.0"
 	},
@@ -34,6 +34,7 @@
 		"exclude": [
 			"spec/*",
 			"lib/errors.js",
+			"lib/deprecatedErrors.js",
 			"lib/constants.js",
 			"lib/docs.js",
 			"conf.js"

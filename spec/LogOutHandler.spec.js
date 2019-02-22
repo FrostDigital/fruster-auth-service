@@ -7,7 +7,7 @@ const UserServiceClient = require("../lib/clients/UserServiceClient");
 const Db = require("mongodb").Db;
 
 
-describe("Logout", () => {
+describe("LogOutHandler", () => {
 
 	/** @type {Db} */
 	let db;
@@ -17,18 +17,13 @@ describe("Logout", () => {
 		service: authService,
 		bus: bus,
 		mockNats: true,
-		afterStart: (connection) => {
-			db = connection.db;
-		}
+		afterStart: (connection) => db = connection.db
 	});
 
 	it("should remove cookie after logout", async done => {
 		try {
 			const reqId = "a-req-id";
-			const credentials = {
-				username: "joelsoderstrom",
-				password: "ZlatansPonyTail"
-			}
+			const credentials = { username: "joelsoderstrom", password: "ZlatansPonyTail" };
 
 			testUtils.mockService({
 				subject: UserServiceClient.endpoints.GET_USER,
@@ -49,23 +44,23 @@ describe("Logout", () => {
 				expectData: credentials
 			});
 
-			await bus.request({
+			const { headers: { ["Set-Cookie"]: cookie } } = await bus.request({
 				subject: constants.endpoints.http.LOGIN_WITH_COOKIE,
 				skipOptionsRequest: true,
 				message: { reqId, data: credentials }
 			});
 
-			const resp = await bus.request({
+			const { status, headers: { ["Set-Cookie"]: expiredCookie } } = await bus.request({
 				subject: constants.endpoints.http.LOGOUT,
 				skipOptionsRequest: true,
-				message: { reqId: reqId, user: { scopes: ["ola"] } }
+				message: { reqId, headers: { cookie }, user: { scopes: ["ola"] } }
 			});
 
-			expect(resp.status).toBe(200);
-			expect(resp.reqId).toBe(reqId);
-			expect(resp.headers["Set-Cookie"]).toBeDefined();
-			expect(resp.headers["Set-Cookie"]).toMatch("delete");
-			expect(resp.headers["Set-Cookie"]).toMatch("expires=Thu, 01 Jan 1970 00:00:00 GMT");
+			expect(status).toBe(200);
+
+			expect(expiredCookie).toBeDefined();
+			expect(expiredCookie).toMatch("delete");
+			expect(expiredCookie).toMatch("expires=Thu, 01 Jan 1970 00:00:00 GMT");
 
 			done();
 		} catch (err) {
@@ -77,10 +72,7 @@ describe("Logout", () => {
 	it("should remove session after logout when logging out with cookie", async done => {
 		try {
 			const reqId = "a-req-id";
-			const credentials = {
-				username: "joelsoderstrom",
-				password: "ZlatansPonyTail"
-			}
+			const credentials = { username: "joelsoderstrom", password: "ZlatansPonyTail" };
 			const user = {
 				id: "id",
 				firstName: "firstName",
@@ -103,7 +95,7 @@ describe("Logout", () => {
 				expectData: credentials
 			});
 
-			const loginResponse = await bus.request({
+			const { headers: { ["Set-Cookie"]: cookie } } = await bus.request({
 				subject: constants.endpoints.http.LOGIN_WITH_COOKIE,
 				skipOptionsRequest: true,
 				message: { reqId, data: credentials }
@@ -116,7 +108,7 @@ describe("Logout", () => {
 			const resp = await bus.request({
 				subject: constants.endpoints.http.LOGOUT,
 				skipOptionsRequest: true,
-				message: { headers: { cookie: loginResponse.headers["Set-Cookie"] }, reqId, user }
+				message: { headers: { cookie }, reqId, user }
 			});
 
 			session = await db.collection(constants.collection.SESSIONS).findOne({ userId: user.id });
