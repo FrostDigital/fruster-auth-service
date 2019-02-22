@@ -42,22 +42,27 @@ module.exports.start = async (busAddress, mongoUrl) => {
 	const decodeTokenHandler = new DecodeTokenHandler(jwtManager);
 	const logOutUsersByIdHandler = new LogOutUsersByIdHandler(jwtManager);
 
-	const LogoutUsersByIdRequest = require("./schemas/LogoutUsersByIdRequest");
+	const LogoutUsersByIdRequest = require("./schemas/LogOutUsersByIdRequest");
+	const AuthRequest = require("./schemas/AuthRequest");
+	const DecodeTokenRequest = require("./schemas/DecodeTokenRequest");
+	const GenerateJWTTokenForUserRequest = require("./schemas/GenerateJWTTokenForUserRequest");
+	const RefreshTokenRequest = require("./schemas/RefreshTokenRequest");
+	const TokenAuthResponse = require("./schemas/TokenAuthResponse");
 
 	/**
 	 * HTTP
 	 */
 	bus.subscribe({
 		subject: constants.endpoints.http.LOGIN_WITH_COOKIE,
-		requestSchema: constants.schemas.request.AUTH_REQUEST,
+		requestSchema: AuthRequest,
 		docs: docs.http.LOGIN_WITH_COOKIE,
 		handle: req => cookieLoginHandler.handle(req)
 	});
 
 	bus.subscribe({
 		subject: constants.endpoints.http.LOGIN_WITH_TOKEN,
-		requestSchema: constants.schemas.request.AUTH_REQUEST,
-		responseSchema: constants.schemas.response.TOKEN_AUTH_RESPONSE,
+		requestSchema: AuthRequest,
+		responseSchema: TokenAuthResponse,
 		docs: docs.http.LOGIN_WITH_TOKEN,
 	}, req => tokenLoginHandler.handle(req));
 
@@ -70,7 +75,7 @@ module.exports.start = async (busAddress, mongoUrl) => {
 	bus.subscribe({
 		subject: constants.endpoints.http.REFRESH_AUTH,
 		docs: docs.http.REFRESH_AUTH,
-		requestSchema: constants.schemas.request.REFRESH_AUTH,
+		requestSchema: RefreshTokenRequest,
 		handle: req => refreshTokenHandler.handle(req)
 	});
 
@@ -84,15 +89,15 @@ module.exports.start = async (busAddress, mongoUrl) => {
 	/** DEPRECATED */
 	bus.subscribe({
 		subject: "http.post.auth.web",
-		requestSchema: constants.schemas.request.AUTH_REQUEST,
+		requestSchema: AuthRequest,
 		deprecated: `Use ${constants.endpoints.http.LOGIN_WITH_COOKIE} instead`,
 		handle: req => cookieLoginHandler.handle(req)
 	});
 	/** DEPRECATED */
 	bus.subscribe({
 		subject: "http.post.auth.app",
-		requestSchema: constants.schemas.request.AUTH_REQUEST,
-		responseSchema: constants.schemas.response.TOKEN_AUTH_RESPONSE,
+		requestSchema: AuthRequest,
+		responseSchema: TokenAuthResponse,
 		deprecated: `Use ${constants.endpoints.http.LOGIN_WITH_TOKEN} instead`,
 		handle: req => tokenLoginHandler.handle(req)
 	});
@@ -102,22 +107,22 @@ module.exports.start = async (busAddress, mongoUrl) => {
 	 */
 	bus.subscribe({
 		subject: constants.endpoints.service.DECODE_TOKEN,
-		requestSchema: constants.schemas.request.DECODE_TOKEN_REQUEST,
+		requestSchema: DecodeTokenRequest,
 		docs: docs.service.DECODE_TOKEN,
 		handle: req => decodeTokenHandler.handle(req)
 	});
 
 	bus.subscribe({
 		subject: constants.endpoints.service.GENERATE_TOKEN_FOR_USER_COOKIE,
-		requestSchema: constants.schemas.request.GENERATE_JWT_TOKEN_FOR_USER_REQUEST,
+		requestSchema: GenerateJWTTokenForUserRequest,
 		docs: docs.shared.GENERATE_TOKEN_FOR_USER,
 		handle: req => generateJWTTokenHandler.handle(req, isCookie)
 	});
 
 	bus.subscribe({
 		subject: constants.endpoints.service.GENERATE_TOKEN_FOR_USER_TOKEN,
-		requestSchema: constants.schemas.request.GENERATE_JWT_TOKEN_FOR_USER_REQUEST,
-		responseSchema: constants.schemas.response.TOKEN_AUTH_RESPONSE,
+		requestSchema: GenerateJWTTokenForUserRequest,
+		responseSchema: TokenAuthResponse,
 		docs: docs.shared.GENERATE_TOKEN_FOR_USER,
 		handle: req => generateJWTTokenHandler.handle(req, isToken)
 	});
@@ -148,11 +153,15 @@ module.exports.start = async (busAddress, mongoUrl) => {
 };
 
 function createIndexes(db) {
-	/** Makes sure sessions expire and gets removed after the jwt token would have expired. */
-	db.collection(constants.collection.SESSIONS)
-		.createIndex({ expires: 1 }, { expireAfterSeconds: 0 });
-	db.collection(constants.collection.SESSIONS)
-		.createIndex({ userId: 1, id: 1 });
-	db.collection(constants.collection.SESSIONS)
-		.createIndex({ id: 1 }, { unique: true, partialFilterExpression: { id: { $exists: true } } });
+	try {
+		/** Makes sure sessions expire and gets removed after the jwt token would have expired. */
+		db.collection(constants.collection.SESSIONS)
+			.createIndex({ expires: 1 }, { expireAfterSeconds: 0 });
+		db.collection(constants.collection.SESSIONS)
+			.createIndex({ userId: 1, id: 1 });
+		db.collection(constants.collection.SESSIONS)
+			.createIndex({ id: 1 }, { unique: true, partialFilterExpression: { id: { $exists: true } } });
+	} catch (err) {
+		log.info("MONGO DB:", err);
+	}
 }

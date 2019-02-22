@@ -1,10 +1,13 @@
 module.exports = {
-	id: "LogoutUsersByIdRequest",
+	id: "LogOutUsersByIdRequest",
 	additionalProperties: false,
 	properties: {
 		userIds: {
 			type: "array",
-			items: { type: "string" }
+			items: {
+				type: "string",
+				format: "uuid"
+			}
 		}
 	},
 	required: ["userIds"]
