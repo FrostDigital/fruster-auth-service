@@ -9,12 +9,12 @@ const JWTManager = require("./lib/managers/JWTManager");
 
 const CookieLoginHandler = require("./lib/handlers/login/CookieLoginHandler");
 const TokenLoginHandler = require("./lib/handlers/login/TokenLoginHandler");
-const LogoutHandler = require("./lib/handlers/LogoutHandler");
+const LogOutHandler = require("./lib/handlers/LogOutHandler");
 const RefreshTokenHandler = require("./lib/handlers/RefreshTokenHandler");
 const DecodeTokenHandler = require("./lib/handlers/DecodeTokenHandler");
 const GenerateJWTTokenHandler = require("./lib/handlers/GenerateJWTTokenHandler");
 const ConvertTokenToCookieHandler = require("./lib/handlers/ConvertTokenToCookieHandler");
-
+const LogOutUsersByIdHandler = require("./lib/handlers/LogOutUsersByIdHandler");
 
 const docs = require('./lib/docs');
 const Db = require("mongodb").Db;
@@ -33,13 +33,16 @@ module.exports.start = async (busAddress, mongoUrl) => {
 	const sessionRepo = new SessionRepo(db);
 	const jwtManager = new JWTManager(sessionRepo);
 
-	const logoutHandler = new LogoutHandler(jwtManager);
+	const logOutHandler = new LogOutHandler(jwtManager);
 	const cookieLoginHandler = new CookieLoginHandler(jwtManager);
 	const tokenLoginHandler = new TokenLoginHandler(refreshTokenRepo, jwtManager);
 	const convertTokenToCookieHandler = new ConvertTokenToCookieHandler(jwtManager);
 	const refreshTokenHandler = new RefreshTokenHandler(refreshTokenRepo, jwtManager);
 	const generateJWTTokenHandler = new GenerateJWTTokenHandler(tokenLoginHandler, cookieLoginHandler);
 	const decodeTokenHandler = new DecodeTokenHandler(jwtManager);
+	const logOutUsersByIdHandler = new LogOutUsersByIdHandler(jwtManager);
+
+	const LogoutUsersByIdRequest = require("./schemas/LogoutUsersByIdRequest");
 
 	/**
 	 * HTTP
@@ -75,7 +78,7 @@ module.exports.start = async (busAddress, mongoUrl) => {
 		subject: constants.endpoints.http.LOGOUT,
 		mustBeLoggedIn: true,
 		docs: docs.http.LOGOUT,
-		handle: req => logoutHandler.handle(req)
+		handle: req => logOutHandler.handle(req)
 	});
 
 	/** DEPRECATED */
@@ -117,6 +120,13 @@ module.exports.start = async (busAddress, mongoUrl) => {
 		responseSchema: constants.schemas.response.TOKEN_AUTH_RESPONSE,
 		docs: docs.shared.GENERATE_TOKEN_FOR_USER,
 		handle: req => generateJWTTokenHandler.handle(req, isToken)
+	});
+
+	bus.subscribe({
+		subject: constants.endpoints.service.LOGOUT_USERS_BY_ID,
+		requestSchema: LogoutUsersByIdRequest,
+		docs: docs.service.LOGOUT_USERS_BY_ID,
+		handle: req => logOutUsersByIdHandler.handle(req)
 	});
 
 	/** DEPRECATED */
