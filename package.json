@@ -4,7 +4,7 @@
 	"private": true,
 	"scripts": {
 		"dev": "ts-node-dev --respawn --transpileOnly ./app.ts",
-		"start": "ts-node -T ./app.js",
+		"start": "ts-node -T ./app.ts",
 		"test": "nyc --reporter=html --check-coverage --lines 90 ts-node ./spec/support/jasmine-runner.js"
 	},
 	"dependencies": {

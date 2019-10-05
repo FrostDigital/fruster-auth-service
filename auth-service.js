@@ -7,7 +7,7 @@ const RefreshTokenRepo = require("./lib/repos/RefreshTokenRepo");
 const SessionRepo = require("./lib/repos/SessionRepo");
 const JWTManager = require("./lib/managers/JWTManager");
 
-const CookieLoginHandler = require("./lib/handlers/login/CookieLoginHandler");
+import CookieLoginHandler from "./lib/handlers/CookieLoginHandler";
 const TokenLoginHandler = require("./lib/handlers/login/TokenLoginHandler");
 const LogOutHandler = require("./lib/handlers/LogOutHandler");
 const RefreshTokenHandler = require("./lib/handlers/RefreshTokenHandler");
