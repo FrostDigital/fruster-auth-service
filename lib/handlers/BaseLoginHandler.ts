@@ -1,6 +1,4 @@
 const log = require("fruster-log");
-const bus = require("fruster-bus");
-const FrusterRequest = bus.FrusterRequest;
 const UserServiceClient = require("../clients/UserServiceClient");
 
 
@@ -9,7 +7,7 @@ class BaseLoginHandler {
 	/**
 	 * @param {FrusterRequest} req
 	 */
-	async handle(req) {
+	async handle(req: any) { // TODO: Fruster bus needs to expose type defs
 		const credentials = req.data;
 
 		try {
@@ -26,17 +24,17 @@ class BaseLoginHandler {
 	 * @param {Object} userToLogin
 	 * @param {String} reqId
 	 */
-	login(userToLogin, reqId) {
+	login(userToLogin: any, reqId: string) {
 		// Override me
 	}
 
 	/**
 	 * @param {Object} err
 	 */
-	_handleAuthError(err) {
+	_handleAuthError(err: Error) {
 		log.debug("User service failed validating username/password", err);
 		throw err;
 	}
 }
 
-module.exports = BaseLoginHandler;
+export default BaseLoginHandler;
