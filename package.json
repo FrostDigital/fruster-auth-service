@@ -14,7 +14,6 @@
 		"fruster-log": "0.0.18",
 		"fruster-errors": "0.1.2",
 		"jwt-simple": "^0.5.6",
-		"lodash": "^4.17.15",
 		"mongodb": "^2.2.36",
 		"ms": "^2.1.2",
 		"uuid": "^3.4.0",
