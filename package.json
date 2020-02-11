@@ -9,23 +9,22 @@
 	"dependencies": {
 		"crypto": "^1.0.1",
 		"csprng": "^0.1.2",
-		"fruster-bus": "^0.5.3",
-		"fruster-health": "0.0.13",
+		"fruster-bus": "^0.5.10",
+		"fruster-health": "0.0.14",
 		"fruster-log": "0.0.18",
 		"fruster-errors": "0.1.2",
-		"jwt-simple": "^0.5.5",
-		"lodash": "^4.17.11",
-		"mongodb": "^2.2.34",
-		"ms": "^2.1.1",
-		"uuid": "^3.3.2",
-		"cookie": "^0.3.1"
+		"jwt-simple": "^0.5.6",
+		"mongodb": "^2.2.36",
+		"ms": "^2.1.2",
+		"uuid": "^3.4.0",
+		"cookie": "^0.4.0"
 	},
 	"devDependencies": {
 		"@types/mongodb": "2.2.19",
-		"fruster-test-utils": "^0.4.0",
-		"jasmine": "^3.3.1",
+		"fruster-test-utils": "^0.5.0",
+		"jasmine": "^3.5.0",
 		"jasmine-spec-reporter": "^4.2.1",
-		"nyc": "^13.1.0"
+		"nyc": "^15.0.0"
 	},
 	"engines": {
 		"node": "8.1.2"

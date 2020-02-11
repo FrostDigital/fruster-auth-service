@@ -1,20 +1,16 @@
-const authService = require("../auth-service");
-const constants = require("../lib/constants");
-const testUtils = require("fruster-test-utils");
 const uuid = require("uuid");
-const bus = require("fruster-bus");
+const bus = require("fruster-bus").testBus;
+const frusterTestUtils = require("fruster-test-utils");
+const specConstants = require("./support/spec-constants");
+const constants = require("../lib/constants");
 
 describe("LogOutUsersByIdHandler", () => {
 
 	let collection;
 
-	testUtils.startBeforeEach({
-		mongoUrl: "mongodb://localhost:27017/logout-service-test",
-		service: authService,
-		mockNats: true,
-		bus,
-		afterStart: (connection) => collection = connection.db.collection(constants.collection.SESSIONS)
-	});
+	frusterTestUtils
+		.startBeforeEach(specConstants
+			.testUtilsOptions(async ({ db }) => { collection = db.collection(constants.collection.SESSIONS); }));
 
 	const sessionFixture = () => ({
 		id: uuid.v4(), // we don't really care about this, so just a random UUID
