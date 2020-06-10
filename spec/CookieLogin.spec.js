@@ -12,8 +12,9 @@ const SessionRepo = require("../lib/repos/SessionRepo");
 const SpecUtils = require("./support/SpecUtils");
 const specConstants = require("./support/spec-constants");
 const mocks = require("./support/mocks");
+const log = require("fruster-log");
 
-fdescribe("Cookie login", () => {
+describe("Cookie login", () => {
 
 	/** @type {Db} */
 	let db;
@@ -201,10 +202,12 @@ fdescribe("Cookie login", () => {
 		expect(session.id).toBe(crypto.createHmac("sha512", `${decodedJWT.exp} ${user.id}${decodedJWT.salt}`).digest("hex"));
 	});
 
-	fit("should save session details in session on login", async done => {
+	it("should save session details in session on login", async done => {
 		const reqId = "a-req-id";
 		const username = "joelsoderstrom";
 		const password = "ZlatansPonyTail";
+		const userAgent = "wellbee%20Test/1184 CFNetwork/1125.2 Darwin/19.4.0";
+		const version = "13.4.1";
 
 		const user = {
 			id: "id",
@@ -213,18 +216,21 @@ fdescribe("Cookie login", () => {
 			email: "email"
 		};
 
-		testUtils.mockService({
-			subject: UserServiceClient.endpoints.GET_USER,
-			data: {
-				users: [user],
-				totalCount: 1
+		const mockValidatePassword = frusterTestUtils.mockService({
+			subject: UserServiceClient.endpoints.VALIDATE_PASSWORD,
+			response: {
+				data: { id: user.id }
 			}
 		});
 
-		testUtils.mockService({
-			subject: UserServiceClient.endpoints.VALIDATE_PASSWORD,
-			data: [{ id: "id" }],
-			expectData: { username, password }
+		const mockGetUsersByQuery = frusterTestUtils.mockService({
+			subject: UserServiceClient.endpoints.GET_USERS_BY_QUERY,
+			response: {
+				data: {
+					users: [user],
+					totalCount: 1
+				}
+			}
 		});
 
 		try {
@@ -234,22 +240,23 @@ fdescribe("Cookie login", () => {
 					reqId: reqId,
 					data: { username, password },
 					headers: {
-						"user-agent": "ellbee%20Test/1184 CFNetwork/1125.2 Darwin/19.4.0",
-						appVersion: "13.4.1"
+						"user-agent": userAgent,
+						version
 					}
 				}
 			});
 
+			expect(mockValidatePassword.requests[0].data.username).toBe(username, "mockValidatePassword.requests[0].data.username");
+			expect(mockValidatePassword.requests[0].data.password).toBe(password, "mockValidatePassword.requests[0].data.password");
+
+			expect(mockGetUsersByQuery.requests[0].data.query.id).toBe(user.id, "mockGetUsersByQuery.requests[0].data.query.id");
+
 			const session = await db.collection(constants.collection.SESSIONS).findOne({ userId: user.id });
 
-			console.log("\n");
-			console.log("=======================================");
-			console.log("session");
-			console.log("=======================================");
-			console.log(require("util").inspect(session, null, null, true));
-			console.log("\n");
-
 			expect(session).toBeDefined("session");
+			expect(session.sessionDetails.userAgent).toBe(userAgent, "session.sessionDetails.userAgent");
+			expect(session.sessionDetails.version).toBe(version, "session.sessionDetails.version");
+			expect(session.sessionDetails.created).toBeDefined("session.sessionDetails.created");
 
 			const jwtCookie = cookie.parse(resp.headers["Set-Cookie"])[conf.jwtCookieName];
 			const decodedJWT = await jwtManager.decode(jwtCookie);

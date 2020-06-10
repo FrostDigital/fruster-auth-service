@@ -9,7 +9,7 @@
 	"dependencies": {
 		"crypto": "^1.0.1",
 		"csprng": "^0.1.2",
-		"fruster-bus": "0.7.0",
+		"fruster-bus": "^0.5.10",
 		"fruster-health": "0.0.14",
 		"fruster-log": "0.0.18",
 		"fruster-errors": "0.1.2",
@@ -23,7 +23,7 @@
 		"@types/mongodb": "2.2.19",
 		"fruster-test-utils": "^0.5.0",
 		"jasmine": "^3.5.0",
-		"jasmine-spec-reporter": "^4.2.1",
+		"jasmine-spec-reporter": "^5.0.2",
 		"nyc": "^15.0.0"
 	},
 	"engines": {

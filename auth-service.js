@@ -15,10 +15,11 @@ const DecodeTokenHandler = require("./lib/handlers/DecodeTokenHandler");
 const GenerateJWTTokenHandler = require("./lib/handlers/GenerateJWTTokenHandler");
 const ConvertTokenToCookieHandler = require("./lib/handlers/ConvertTokenToCookieHandler");
 const LogOutUsersByIdHandler = require("./lib/handlers/LogOutUsersByIdHandler");
+const GetSessionDetailsByUserIdHandler = require("./lib/handlers/GetSessionDetailsByUserIdHandler");
+const GetActiveSessionsHandler = require("./lib/handlers/GetActiveSessionsHandler");
 
 const docs = require('./lib/docs');
 const Db = require("mongodb").Db;
-
 
 module.exports.start = async (busAddress, mongoUrl) => {
 	await bus.connect(busAddress);
@@ -41,6 +42,8 @@ module.exports.start = async (busAddress, mongoUrl) => {
 	const generateJWTTokenHandler = new GenerateJWTTokenHandler(tokenLoginHandler, cookieLoginHandler);
 	const decodeTokenHandler = new DecodeTokenHandler(jwtManager);
 	const logOutUsersByIdHandler = new LogOutUsersByIdHandler(jwtManager);
+	const getSessionDetailsByUserIdHandler = new GetSessionDetailsByUserIdHandler(sessionRepo);
+	const getActiveSessionsHandler = new GetActiveSessionsHandler(sessionRepo);
 
 	const LogoutUsersByIdRequest = require("./schemas/LogOutUsersByIdRequest");
 	const AuthRequest = require("./schemas/AuthRequest");
@@ -48,6 +51,8 @@ module.exports.start = async (busAddress, mongoUrl) => {
 	const GenerateJWTTokenForUserRequest = require("./schemas/GenerateJWTTokenForUserRequest");
 	const RefreshTokenRequest = require("./schemas/RefreshTokenRequest");
 	const TokenAuthResponse = require("./schemas/TokenAuthResponse");
+	const GetSessionDetailsByUserIdRequest = require("./schemas/GetSessionDetailsByUserIdRequest");
+	const SessionDetailsResponse = require("./schemas/SessionDetailsResponse");
 
 	/**
 	 * HTTP
@@ -56,7 +61,7 @@ module.exports.start = async (busAddress, mongoUrl) => {
 		subject: constants.endpoints.http.LOGIN_WITH_COOKIE,
 		requestSchema: AuthRequest,
 		docs: docs.http.LOGIN_WITH_COOKIE,
-		handle: req => cookieLoginHandler.handle(req)
+		handle: req => cookieLoginHandler.handleHttp(req)
 	});
 
 	bus.subscribe({
@@ -64,7 +69,7 @@ module.exports.start = async (busAddress, mongoUrl) => {
 		requestSchema: AuthRequest,
 		responseSchema: TokenAuthResponse,
 		docs: docs.http.LOGIN_WITH_TOKEN,
-	}, req => tokenLoginHandler.handle(req));
+	}, req => tokenLoginHandler.handleHttp(req));
 
 	bus.subscribe({
 		subject: constants.endpoints.http.CONVERT_TOKEN_TO_COOKIE,
@@ -76,14 +81,22 @@ module.exports.start = async (busAddress, mongoUrl) => {
 		subject: constants.endpoints.http.REFRESH_AUTH,
 		docs: docs.http.REFRESH_AUTH,
 		requestSchema: RefreshTokenRequest,
-		handle: req => refreshTokenHandler.handle(req)
+		handle: req => refreshTokenHandler.handleHttp(req)
 	});
 
 	bus.subscribe({
 		subject: constants.endpoints.http.LOGOUT,
 		mustBeLoggedIn: true,
 		docs: docs.http.LOGOUT,
-		handle: req => logOutHandler.handle(req)
+		handle: req => logOutHandler.handleHttp(req)
+	});
+
+	bus.subscribe({
+		subject: constants.endpoints.http.GET_ACTIVE_SESSIONS,
+		mustBeLoggedIn: true,
+		responseSchema: SessionDetailsResponse,
+		docs: docs.http.GET_ACTIVE_SESSIONS, // TODO:
+		handle: req => getActiveSessionsHandler.handleHttp(req)
 	});
 
 	/** DEPRECATED */
@@ -91,7 +104,7 @@ module.exports.start = async (busAddress, mongoUrl) => {
 		subject: "http.post.auth.web",
 		requestSchema: AuthRequest,
 		deprecated: `Use ${constants.endpoints.http.LOGIN_WITH_COOKIE} instead`,
-		handle: req => cookieLoginHandler.handle(req)
+		handle: req => cookieLoginHandler.handleHttp(req)
 	});
 	/** DEPRECATED */
 	bus.subscribe({
@@ -99,7 +112,7 @@ module.exports.start = async (busAddress, mongoUrl) => {
 		requestSchema: AuthRequest,
 		responseSchema: TokenAuthResponse,
 		deprecated: `Use ${constants.endpoints.http.LOGIN_WITH_TOKEN} instead`,
-		handle: req => tokenLoginHandler.handle(req)
+		handle: req => tokenLoginHandler.handleHttp(req)
 	});
 
 	/**
@@ -132,6 +145,14 @@ module.exports.start = async (busAddress, mongoUrl) => {
 		requestSchema: LogoutUsersByIdRequest,
 		docs: docs.service.LOGOUT_USERS_BY_ID,
 		handle: req => logOutUsersByIdHandler.handle(req)
+	});
+
+	bus.subscribe({
+		subject: constants.endpoints.service.GET_SESSION_DETAILS_BY_USER_ID,
+		requestSchema: GetSessionDetailsByUserIdRequest,
+		responseSchema: SessionDetailsResponse,
+		docs: docs.service.GET_SESSION_DETAILS_BY_USER_ID, // TODO:
+		handle: req => getSessionDetailsByUserIdHandler.handle(req)
 	});
 
 	/** DEPRECATED */
