@@ -9,13 +9,8 @@
 	"dependencies": {
 		"crypto": "^1.0.1",
 		"csprng": "^0.1.2",
-<<<<<<< HEAD
 		"fruster-bus": "0.7.0",
-		"fruster-health": "0.0.13",
-=======
-		"fruster-bus": "^0.5.10",
 		"fruster-health": "0.0.14",
->>>>>>> eb5bd9566d8bf206ce494d4552e0a48013786f99
 		"fruster-log": "0.0.18",
 		"fruster-errors": "0.1.2",
 		"jwt-simple": "^0.5.6",
