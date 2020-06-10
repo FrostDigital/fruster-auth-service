@@ -1,10 +1,9 @@
-const bus = require("fruster-bus");
-const log = require("fruster-log");
-const authService = require("../auth-service");
-const constants = require("../lib/constants");
-const testUtils = require("fruster-test-utils");
-const UserServiceClient = require("../lib/clients/UserServiceClient");
 const Db = require("mongodb").Db;
+const bus = require("fruster-bus").testBus;
+const frusterTestUtils = require("fruster-test-utils");
+const constants = require("../lib/constants");
+const specConstants = require("./support/spec-constants");
+const mocks = require("./support/mocks");
 
 
 describe("LogOutHandler", () => {
@@ -12,289 +11,196 @@ describe("LogOutHandler", () => {
 	/** @type {Db} */
 	let db;
 
-	testUtils.startBeforeEach({
-		mongoUrl: "mongodb://localhost:27017/logout-service-test",
-		service: authService,
-		bus: bus,
-		mockNats: true,
-		afterStart: (connection) => db = connection.db
+	frusterTestUtils
+		.startBeforeEach(specConstants
+			.testUtilsOptions(async (connection) => { db = connection.db; }));
+
+	it("should remove cookie after logout", async () => {
+		const reqId = "a-req-id";
+		const credentials = { username: "joelsoderstrom", password: "ZlatansPonyTail" };
+
+		mocks.getUsers([{
+			id: "id",
+			firstName: "firstName",
+			lastName: "lastName",
+			email: "email"
+		}]);
+
+		mocks.validatePassword();
+
+		const { headers: { ["Set-Cookie"]: cookie } } = await bus.request({
+			subject: constants.endpoints.http.LOGIN_WITH_COOKIE,
+			skipOptionsRequest: true,
+			message: { reqId, data: credentials }
+		});
+
+		const { status, headers: { ["Set-Cookie"]: expiredCookie } } = await bus.request({
+			subject: constants.endpoints.http.LOGOUT,
+			skipOptionsRequest: true,
+			message: { reqId, headers: { cookie }, user: { scopes: ["ola"] } }
+		});
+
+		expect(status).toBe(200);
+
+		expect(expiredCookie).toBeDefined();
+		expect(expiredCookie).toMatch("delete");
+		expect(expiredCookie).toMatch("expires=Thu, 01 Jan 1970 00:00:00 GMT");
 	});
 
-	it("should remove cookie after logout", async done => {
-		try {
-			const reqId = "a-req-id";
-			const credentials = { username: "joelsoderstrom", password: "ZlatansPonyTail" };
+	it("should remove session after logout when logging out with cookie", async () => {
+		const reqId = "a-req-id";
+		const credentials = { username: "joelsoderstrom", password: "ZlatansPonyTail" };
+		const user = {
+			id: "id",
+			firstName: "firstName",
+			lastName: "lastName",
+			email: "email",
+			scopes: ["ola"]
+		};
 
-			testUtils.mockService({
-				subject: UserServiceClient.endpoints.GET_USER,
-				data: {
-					users: [{
-						id: "id",
-						firstName: "firstName",
-						lastName: "lastName",
-						email: "email"
-					}],
-					totalCount: 1
-				}
-			});
+		mocks.getUsers([user]);
+		mocks.validatePassword();
 
-			testUtils.mockService({
-				subject: UserServiceClient.endpoints.VALIDATE_PASSWORD,
-				data: { id: "id" },
-				expectData: credentials
-			});
+		const { headers: { ["Set-Cookie"]: cookie } } = await bus.request({
+			subject: constants.endpoints.http.LOGIN_WITH_COOKIE,
+			skipOptionsRequest: true,
+			message: { reqId, data: credentials }
+		});
 
-			const { headers: { ["Set-Cookie"]: cookie } } = await bus.request({
+		let session = await db.collection(constants.collection.SESSIONS).findOne({ userId: user.id });
+
+		expect(session).toBeDefined("session from database before logout");
+
+		await bus.request({
+			subject: constants.endpoints.http.LOGOUT,
+			skipOptionsRequest: true,
+			message: { headers: { cookie }, reqId, user }
+		});
+
+		session = await db.collection(constants.collection.SESSIONS).findOne({ userId: user.id });
+
+		expect(session).toBeNull("session from database after logout");
+	});
+
+	it("should remove session after logout when logging out with token", async () => {
+		const reqId = "a-req-id";
+		const credentials = {
+			username: "joelsoderstrom",
+			password: "ZlatansPonyTail"
+		}
+		const user = {
+			id: "id",
+			firstName: "firstName",
+			lastName: "lastName",
+			email: "email",
+			scopes: ["ola"]
+		};
+
+		mocks.getUsers([user]);
+		mocks.validatePassword();
+
+		const loginResponse = await bus.request({
+			subject: constants.endpoints.http.LOGIN_WITH_TOKEN,
+			skipOptionsRequest: true,
+			message: { reqId, data: credentials }
+		});
+
+		let session = await db.collection(constants.collection.SESSIONS).findOne({ userId: user.id });
+
+		expect(session).toBeDefined("session from database before logout");
+
+		await bus.request({
+			subject: constants.endpoints.http.LOGOUT,
+			skipOptionsRequest: true,
+			message: { headers: { authorization: `Bearer ${loginResponse.data.accessToken}` }, reqId, user }
+		});
+
+		session = await db.collection(constants.collection.SESSIONS).findOne({ userId: user.id });
+
+		expect(session).toBeNull("session from database after logout");
+	});
+
+	it("should remove session after logout when logging out with Authorization token", async () => {
+		const reqId = "a-req-id";
+		const credentials = {
+			username: "joelsoderstrom",
+			password: "ZlatansPonyTail"
+		}
+		const user = {
+			id: "id",
+			firstName: "firstName",
+			lastName: "lastName",
+			email: "email",
+			scopes: ["ola"]
+		};
+
+		mocks.getUsers([user]);
+		mocks.validatePassword();
+
+		const loginResponse = await bus.request({
+			subject: constants.endpoints.http.LOGIN_WITH_TOKEN,
+			skipOptionsRequest: true,
+			message: { reqId, data: credentials }
+		});
+
+		let session = await db.collection(constants.collection.SESSIONS).findOne({ userId: user.id });
+
+		expect(session).toBeDefined("session from database before logout");
+
+		await bus.request({
+			subject: constants.endpoints.http.LOGOUT,
+			skipOptionsRequest: true,
+			message: { headers: { Authorization: `Bearer ${loginResponse.data.accessToken}` }, reqId, user }
+		});
+
+		session = await db.collection(constants.collection.SESSIONS).findOne({ userId: user.id });
+
+		expect(session).toBeNull("session from database after logout");
+	});
+
+	it("should remove all sessions after logout when logging out with logoutAll query", async () => {
+		const reqId = "a-req-id";
+		const credentials = {
+			username: "joelsoderstrom",
+			password: "ZlatansPonyTail"
+		}
+		const user = {
+			id: "id",
+			firstName: "firstName",
+			lastName: "lastName",
+			email: "email",
+			scopes: ["ola"]
+		};
+
+		mocks.getUsers([user]);
+		mocks.validatePassword();
+
+		for (let i = 0; i < 5; i++) {
+			await bus.request({
 				subject: constants.endpoints.http.LOGIN_WITH_COOKIE,
 				skipOptionsRequest: true,
 				message: { reqId, data: credentials }
 			});
-
-			const { status, headers: { ["Set-Cookie"]: expiredCookie } } = await bus.request({
-				subject: constants.endpoints.http.LOGOUT,
-				skipOptionsRequest: true,
-				message: { reqId, headers: { cookie }, user: { scopes: ["ola"] } }
-			});
-
-			expect(status).toBe(200);
-
-			expect(expiredCookie).toBeDefined();
-			expect(expiredCookie).toMatch("delete");
-			expect(expiredCookie).toMatch("expires=Thu, 01 Jan 1970 00:00:00 GMT");
-
-			done();
-		} catch (err) {
-			log.error(err);
-			done.fail(err);
-		}
-	});
-
-	it("should remove session after logout when logging out with cookie", async done => {
-		try {
-			const reqId = "a-req-id";
-			const credentials = { username: "joelsoderstrom", password: "ZlatansPonyTail" };
-			const user = {
-				id: "id",
-				firstName: "firstName",
-				lastName: "lastName",
-				email: "email",
-				scopes: ["ola"]
-			};
-
-			testUtils.mockService({
-				subject: UserServiceClient.endpoints.GET_USER,
-				data: {
-					users: [user],
-					totalCount: 1
-				}
-			});
-
-			testUtils.mockService({
-				subject: UserServiceClient.endpoints.VALIDATE_PASSWORD,
-				data: { id: "id" },
-				expectData: credentials
-			});
-
-			const { headers: { ["Set-Cookie"]: cookie } } = await bus.request({
-				subject: constants.endpoints.http.LOGIN_WITH_COOKIE,
-				skipOptionsRequest: true,
-				message: { reqId, data: credentials }
-			});
-
-			let session = await db.collection(constants.collection.SESSIONS).findOne({ userId: user.id });
-
-			expect(session).toBeDefined("session from database before logout");
-
-			const resp = await bus.request({
-				subject: constants.endpoints.http.LOGOUT,
-				skipOptionsRequest: true,
-				message: { headers: { cookie }, reqId, user }
-			});
-
-			session = await db.collection(constants.collection.SESSIONS).findOne({ userId: user.id });
-
-			expect(session).toBeNull("session from database after logout");
-
-			done();
-		} catch (err) {
-			log.error(err);
-			done.fail(err);
-		}
-	});
-
-	it("should remove session after logout when logging out with token", async done => {
-		try {
-			const reqId = "a-req-id";
-			const credentials = {
-				username: "joelsoderstrom",
-				password: "ZlatansPonyTail"
-			}
-			const user = {
-				id: "id",
-				firstName: "firstName",
-				lastName: "lastName",
-				email: "email",
-				scopes: ["ola"]
-			};
-
-			testUtils.mockService({
-				subject: UserServiceClient.endpoints.GET_USER,
-				data: {
-					users: [user],
-					totalCount: 1
-				}
-			});
-
-			testUtils.mockService({
-				subject: UserServiceClient.endpoints.VALIDATE_PASSWORD,
-				data: { id: "id" },
-				expectData: credentials
-			});
-
-			const loginResponse = await bus.request({
+			await bus.request({
 				subject: constants.endpoints.http.LOGIN_WITH_TOKEN,
 				skipOptionsRequest: true,
 				message: { reqId, data: credentials }
 			});
-
-			let session = await db.collection(constants.collection.SESSIONS).findOne({ userId: user.id });
-
-			expect(session).toBeDefined("session from database before logout");
-
-			await bus.request({
-				subject: constants.endpoints.http.LOGOUT,
-				skipOptionsRequest: true,
-				message: { headers: { authorization: `Bearer ${loginResponse.data.accessToken}` }, reqId, user }
-			});
-
-			session = await db.collection(constants.collection.SESSIONS).findOne({ userId: user.id });
-
-			expect(session).toBeNull("session from database after logout");
-
-			done();
-		} catch (err) {
-			log.error(err);
-			done.fail(err);
 		}
-	});
 
-	it("should remove session after logout when logging out with Authorization token", async done => {
-		try {
-			const reqId = "a-req-id";
-			const credentials = {
-				username: "joelsoderstrom",
-				password: "ZlatansPonyTail"
-			}
-			const user = {
-				id: "id",
-				firstName: "firstName",
-				lastName: "lastName",
-				email: "email",
-				scopes: ["ola"]
-			};
+		let sessions = await db.collection(constants.collection.SESSIONS).find({ userId: user.id }).toArray();
 
-			testUtils.mockService({
-				subject: UserServiceClient.endpoints.GET_USER,
-				data: {
-					users: [user],
-					totalCount: 1
-				}
-			});
+		expect(sessions.length).toBe(10, "sessions from database before logout");
 
-			testUtils.mockService({
-				subject: UserServiceClient.endpoints.VALIDATE_PASSWORD,
-				data: { id: "id" },
-				expectData: credentials
-			});
+		await bus.request({
+			subject: constants.endpoints.http.LOGOUT,
+			skipOptionsRequest: true,
+			message: { reqId, user, query: { logoutAll: "true" } }
+		});
 
-			const loginResponse = await bus.request({
-				subject: constants.endpoints.http.LOGIN_WITH_TOKEN,
-				skipOptionsRequest: true,
-				message: { reqId, data: credentials }
-			});
+		sessions = await db.collection(constants.collection.SESSIONS).find({ userId: user.id }).toArray();
 
-			let session = await db.collection(constants.collection.SESSIONS).findOne({ userId: user.id });
-
-			expect(session).toBeDefined("session from database before logout");
-
-			const resp = await bus.request({
-				subject: constants.endpoints.http.LOGOUT,
-				skipOptionsRequest: true,
-				message: { headers: { Authorization: `Bearer ${loginResponse.data.accessToken}` }, reqId, user }
-			});
-
-			session = await db.collection(constants.collection.SESSIONS).findOne({ userId: user.id });
-
-			expect(session).toBeNull("session from database after logout");
-
-			done();
-		} catch (err) {
-			log.error(err);
-			done.fail(err);
-		}
-	});
-
-	it("should remove all sessions after logout when logging out with logoutAll query", async done => {
-		try {
-			const reqId = "a-req-id";
-			const credentials = {
-				username: "joelsoderstrom",
-				password: "ZlatansPonyTail"
-			}
-			const user = {
-				id: "id",
-				firstName: "firstName",
-				lastName: "lastName",
-				email: "email",
-				scopes: ["ola"]
-			};
-
-			testUtils.mockService({
-				subject: UserServiceClient.endpoints.GET_USER,
-				data: {
-					users: [user],
-					totalCount: 1
-				}
-			});
-
-			testUtils.mockService({
-				subject: UserServiceClient.endpoints.VALIDATE_PASSWORD,
-				data: { id: "id" },
-				expectData: credentials
-			});
-
-			for (let i = 0; i < 5; i++) {
-				await bus.request({
-					subject: constants.endpoints.http.LOGIN_WITH_COOKIE,
-					skipOptionsRequest: true,
-					message: { reqId, data: credentials }
-				});
-				await bus.request({
-					subject: constants.endpoints.http.LOGIN_WITH_TOKEN,
-					skipOptionsRequest: true,
-					message: { reqId, data: credentials }
-				});
-			}
-
-			let sessions = await db.collection(constants.collection.SESSIONS).find({ userId: user.id }).toArray();
-
-			expect(sessions.length).toBe(10, "sessions from database before logout");
-
-			await bus.request({
-				subject: constants.endpoints.http.LOGOUT,
-				skipOptionsRequest: true,
-				message: { reqId, user, query: { logoutAll: true } }
-			});
-
-			sessions = await db.collection(constants.collection.SESSIONS).find({ userId: user.id }).toArray();
-
-			expect(sessions.length).toBe(0, "sessions from database after logout");
-
-			done();
-		} catch (err) {
-			log.error(err);
-			done.fail(err);
-		}
+		expect(sessions.length).toBe(0, "sessions from database after logout");
 	});
 
 });

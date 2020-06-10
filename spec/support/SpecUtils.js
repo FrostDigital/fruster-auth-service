@@ -3,12 +3,12 @@ const confBackup = Object.assign({}, config);
 
 class SpecUtils {
 
-    constructor() { }
+	constructor() { }
 
-    static resetConfig() {
-        Object.keys(confBackup)
-            .forEach(conf => config[conf] = confBackup[conf]);
-    }
+	static resetConfig() {
+		Object.keys(confBackup)
+			.forEach(conf => config[conf] = confBackup[conf]);
+	}
 
 }
 

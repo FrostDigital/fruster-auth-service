@@ -1,16 +1,13 @@
-const bus = require("fruster-bus");
-const cookie = require("cookie");
-const log = require("fruster-log");
 const jwt = require("jwt-simple");
-const authService = require("../auth-service");
-const conf = require("../conf");
 const uuid = require("uuid");
+const bus = require("fruster-bus").testBus;
+const Db = require("mongodb").Db;
+const frusterTestUtils = require("fruster-test-utils");
+const conf = require("../conf");
 const errors = require("../lib/deprecatedErrors");
 const constants = require("../lib/constants");
-const testUtils = require("fruster-test-utils");
-const UserServiceClient = require("../lib/clients/UserServiceClient");
-const Db = require("mongodb").Db;
-
+const specConstants = require("./support/spec-constants");
+const mocks = require("./support/mocks");
 
 describe("Refresh", () => {
 
@@ -19,19 +16,13 @@ describe("Refresh", () => {
 
 	let refreshTokenColl;
 
-
-	testUtils.startBeforeEach({
-		mongoUrl: "mongodb://localhost:27017/refresh-test",
-		service: authService,
-		bus: bus,
-		mockNats: true,
-		afterStart: async (connection) => {
-			db = connection.db;
-
-			refreshTokenColl = db.collection(constants.collection.REFRESH_TOKENS);
-			await createMockRefreshTokens();
-		}
-	});
+	frusterTestUtils
+		.startBeforeEach(specConstants
+			.testUtilsOptions(async (connection) => {
+				db = connection.db;
+				refreshTokenColl = db.collection(constants.collection.REFRESH_TOKENS);
+				await createMockRefreshTokens();
+			}));
 
 	async function createMockRefreshTokens() {
 		await refreshTokenColl.remove({});
@@ -58,25 +49,36 @@ describe("Refresh", () => {
 		await Promise.all(refreshTokens.map(o => refreshTokenColl.insert(o)));
 	}
 
-	it("should get new access token from refresh token", async done => {
+	it("should get new access token from refresh token", async () => {
+		const reqId = "a-req-id";
+
+		mocks.getUsers([{
+			id: "userId",
+			firstName: "firstName",
+			lastName: "lastName",
+			mail: "mail"
+		}]);
+
+		const { data } = await bus.request({
+			subject: constants.endpoints.http.REFRESH_AUTH,
+			skipOptionsRequest: true,
+			message: {
+				reqId: reqId,
+				data: { refreshToken: "validToken" }
+			}
+		});
+
+		const decodedAccessToken = jwt.decode(data.accessToken, conf.secret);
+		expect(decodedAccessToken.id).toBe("userId");
+	});
+
+	it("should return 404 if user does not exist", async done => {
+		const reqId = "a-req-id";
+
+		mocks.getUsers([]);
+
 		try {
-			const reqId = "a-req-id";
-			const encodedToken = jwt.encode({ foo: "bar" }, conf.secret);
-
-			testUtils.mockService({
-				subject: UserServiceClient.endpoints.GET_USER,
-				data: {
-					users: [{
-						id: "userId",
-						firstName: "firstName",
-						lastName: "lastName",
-						mail: "mail"
-					}],
-					totalCount: 1
-				}
-			});
-
-			const resp = await bus.request({
+			await bus.request({
 				subject: constants.endpoints.http.REFRESH_AUTH,
 				skipOptionsRequest: true,
 				message: {
@@ -85,49 +87,12 @@ describe("Refresh", () => {
 				}
 			});
 
-			const decodedAccessToken = jwt.decode(resp.data.accessToken, conf.secret);
-			expect(decodedAccessToken.id).toBe("userId");
+			done.fail();
+		} catch (err) {
+			expect(err.status).toBe(404, "err.status");
+			expect(err.error.code).toBe(errors.userNotFound().error.code, "err.error.code");
 
 			done();
-		} catch (err) {
-			log.error(err);
-			done.fail(err);
-		}
-	});
-
-	it("should return 404 if user does not exist", async done => {
-		try {
-			const reqId = "a-req-id";
-			const encodedToken = jwt.encode({ foo: "bar" }, conf.secret);
-
-			testUtils.mockService({
-				subject: UserServiceClient.endpoints.GET_USER,
-				data: {
-					users: [],
-					totalCount: 0
-				}
-			});
-
-			try {
-				const resp = await bus.request({
-					subject: constants.endpoints.http.REFRESH_AUTH,
-					skipOptionsRequest: true,
-					message: {
-						reqId: reqId,
-						data: { refreshToken: "validToken" }
-					}
-				});
-
-				done.fail();
-			} catch (err) {
-				expect(err.status).toBe(404, "err.status");
-				expect(err.error.code).toBe(errors.userNotFound().error.code, "err.error.code");
-
-				done();
-			}
-		} catch (err) {
-			log.error(err);
-			done.fail(err);
 		}
 	});
 
