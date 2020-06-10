@@ -9,7 +9,7 @@
 	"dependencies": {
 		"crypto": "^1.0.1",
 		"csprng": "^0.1.2",
-		"fruster-bus": "^0.5.3",
+		"fruster-bus": "0.7.0",
 		"fruster-health": "0.0.13",
 		"fruster-log": "0.0.18",
 		"fruster-errors": "0.1.2",

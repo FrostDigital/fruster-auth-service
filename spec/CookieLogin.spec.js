@@ -13,8 +13,7 @@ const SessionRepo = require("../lib/repos/SessionRepo");
 const crypto = require("crypto");
 const SpecUtils = require("./support/SpecUtils");
 
-
-describe("Cookie login", () => {
+fdescribe("Cookie login", () => {
 
 	/** @type {Db} */
 	let db;
@@ -293,6 +292,68 @@ describe("Cookie login", () => {
 			});
 
 			const session = await db.collection(constants.collection.SESSIONS).findOne({ userId: user.id });
+
+			expect(session).toBeDefined("session");
+
+			const jwtCookie = cookie.parse(resp.headers["Set-Cookie"])[conf.jwtCookieName];
+			const decodedJWT = await jwtManager.decode(jwtCookie);
+
+			expect(session.id).toBe(crypto.createHmac("sha512", `${decodedJWT.exp} ${user.id}${decodedJWT.salt}`).digest("hex"));
+
+			done();
+		} catch (err) {
+			log.error(err);
+			done.fail();
+		}
+	});
+
+	fit("should save session details in session on login", async done => {
+		const reqId = "a-req-id";
+		const username = "joelsoderstrom";
+		const password = "ZlatansPonyTail";
+
+		const user = {
+			id: "id",
+			firstName: "firstName",
+			lastName: "lastName",
+			email: "email"
+		};
+
+		testUtils.mockService({
+			subject: UserServiceClient.endpoints.GET_USER,
+			data: {
+				users: [user],
+				totalCount: 1
+			}
+		});
+
+		testUtils.mockService({
+			subject: UserServiceClient.endpoints.VALIDATE_PASSWORD,
+			data: [{ id: "id" }],
+			expectData: { username, password }
+		});
+
+		try {
+			const resp = await bus.request({
+				subject: constants.endpoints.http.LOGIN_WITH_COOKIE,
+				message: {
+					reqId: reqId,
+					data: { username, password },
+					headers: {
+						"user-agent": "ellbee%20Test/1184 CFNetwork/1125.2 Darwin/19.4.0",
+						appVersion: "13.4.1"
+					}
+				}
+			});
+
+			const session = await db.collection(constants.collection.SESSIONS).findOne({ userId: user.id });
+
+			console.log("\n");
+			console.log("=======================================");
+			console.log("session");
+			console.log("=======================================");
+			console.log(require("util").inspect(session, null, null, true));
+			console.log("\n");
 
 			expect(session).toBeDefined("session");
 

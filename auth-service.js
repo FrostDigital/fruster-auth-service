@@ -149,7 +149,8 @@ module.exports.start = async (busAddress, mongoUrl) => {
 
 	log.info("Auth service is up and running");
 
-	createIndexes(db);
+	if (!process.env.CI)
+		createIndexes(db);
 };
 
 function createIndexes(db) {
