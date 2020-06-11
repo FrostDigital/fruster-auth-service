@@ -1,6 +1,6 @@
 const { collection: { SESSIONS }, endpoints: { http: { GET_ACTIVE_SESSIONS } } } = require("../lib/constants");
 const specConstants = require("./support/spec-constants");
-const { sessions: mockSessions } = require("./support/session-fixtures");
+const SessionFixtures = require("./support/session-fixtures");
 const frusterTestUtils = require("fruster-test-utils");
 const bus = require("fruster-bus").testBus;
 const Db = require("mongodb").Db;
@@ -8,7 +8,7 @@ const Db = require("mongodb").Db;
 describe("GetActiveSessionsHandler", () => {
 
 	const user = {
-		id: mockSessions[0].userId,
+		id: SessionFixtures.sessions[0].userId,
 		scopes: ["just-since-it's-required"]
 	};
 
@@ -20,7 +20,7 @@ describe("GetActiveSessionsHandler", () => {
 			.testUtilsOptions(async (connection) => db = connection.db));
 
 	it("should be possible to get a user's session details", async () => {
-		await db.collection(SESSIONS).insertMany(mockSessions);
+		await db.collection(SESSIONS).insertMany(SessionFixtures.sessions);
 
 		const { status, data: { sessions, totalCount } } = await bus.request({
 			subject: GET_ACTIVE_SESSIONS,
@@ -43,9 +43,8 @@ describe("GetActiveSessionsHandler", () => {
 		expectUnknownSession(sessions[3]);
 	});
 
-
 	it("should be possible to paginate result", async () => {
-		await db.collection(SESSIONS).insertMany(mockSessions);
+		await db.collection(SESSIONS).insertMany(SessionFixtures.sessions);
 
 		const { status, data: { sessions, totalCount } } = await bus.request({
 			subject: GET_ACTIVE_SESSIONS,
@@ -73,7 +72,7 @@ describe("GetActiveSessionsHandler", () => {
 	});
 
 	it("should be possible to sort result", async () => {
-		await db.collection(SESSIONS).insertMany(mockSessions);
+		await db.collection(SESSIONS).insertMany(SessionFixtures.sessions);
 
 		const { status, data: { sessions, totalCount } } = await bus.request({
 			subject: GET_ACTIVE_SESSIONS,
@@ -96,7 +95,7 @@ describe("GetActiveSessionsHandler", () => {
 	});
 
 	it("should be possible to use sort order on sorted result", async () => {
-		await db.collection(SESSIONS).insertMany(mockSessions);
+		await db.collection(SESSIONS).insertMany(SessionFixtures.sessions);
 
 		const { status, data: { sessions, totalCount } } = await bus.request({
 			subject: GET_ACTIVE_SESSIONS,
@@ -120,6 +119,39 @@ describe("GetActiveSessionsHandler", () => {
 			expect(currentSessionDetails.created).toBeGreaterThan(sessions[i - 1].created, "currentSessionDetails.created should be less than that of i - 1");
 		});
 	});
+
+	it("should not return expired sessions", async () => {
+		const sessionsToInsert = [
+			...SessionFixtures.sessions,
+			{
+				...SessionFixtures.sessions[0],
+				expires: new Date("1970-01-01T00:00:00.001Z")
+			}]
+
+		await db.collection(SESSIONS).insertMany(sessionsToInsert);
+
+
+		const { status, data: { sessions, totalCount } } = await bus.request({
+			subject: GET_ACTIVE_SESSIONS,
+			message: { user }
+		});
+
+		expect(status).toBe(200, "status");
+		expect(totalCount).toBe(4, "totalCount");
+		expect(sessions.length).toBe(4, "sessions should contain 4 entries");
+
+		sessions.forEach((currentSession, i) => {
+			expect(currentSession.id).toBeDefined();
+
+			if (i === 0 || currentSession.created === null || sessions[i - 1].created === null)
+				return;
+
+			expect(currentSession.lastActivity).toBeLessThan(sessions[i - 1].lastActivity, "sessions.lastActivity should be less than that of i - 1");
+		});
+
+		expectUnknownSession(sessions[3]);
+	});
+
 
 	function expectUnknownSession(session) {
 		Object.keys(session).forEach(key => {
