@@ -19,6 +19,7 @@ const GetSessionDetailsByUserIdHandler = require("./lib/handlers/GetSessionDetai
 const GetActiveSessionsHandler = require("./lib/handlers/GetActiveSessionsHandler");
 
 const docs = require('./lib/docs');
+
 const Db = require("mongodb").Db;
 
 module.exports.start = async (busAddress, mongoUrl) => {
@@ -53,6 +54,7 @@ module.exports.start = async (busAddress, mongoUrl) => {
 	const TokenAuthResponse = require("./schemas/TokenAuthResponse");
 	const GetSessionDetailsByUserIdRequest = require("./schemas/GetSessionDetailsByUserIdRequest");
 	const SessionDetailsResponse = require("./schemas/SessionDetailsResponse");
+	const ActiveSessionsResponse = require("./schemas/ActiveSessionsResponse");
 
 	/**
 	 * HTTP
@@ -94,8 +96,8 @@ module.exports.start = async (busAddress, mongoUrl) => {
 	bus.subscribe({
 		subject: constants.endpoints.http.GET_ACTIVE_SESSIONS,
 		mustBeLoggedIn: true,
-		responseSchema: SessionDetailsResponse,
-		docs: docs.http.GET_ACTIVE_SESSIONS, // TODO:
+		responseSchema: ActiveSessionsResponse,
+		docs: docs.http.GET_ACTIVE_SESSIONS,
 		handle: req => getActiveSessionsHandler.handleHttp(req)
 	});
 
@@ -151,7 +153,7 @@ module.exports.start = async (busAddress, mongoUrl) => {
 		subject: constants.endpoints.service.GET_SESSION_DETAILS_BY_USER_ID,
 		requestSchema: GetSessionDetailsByUserIdRequest,
 		responseSchema: SessionDetailsResponse,
-		docs: docs.service.GET_SESSION_DETAILS_BY_USER_ID, // TODO:
+		docs: docs.service.GET_SESSION_DETAILS_BY_USER_ID,
 		handle: req => getSessionDetailsByUserIdHandler.handle(req)
 	});
 

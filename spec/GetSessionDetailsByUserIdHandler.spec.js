@@ -29,13 +29,13 @@ describe("GetSessionDetailsByUserIdHandler", () => {
 		expect(sessionDetails.length).toBe(4, "sessionDetails should contain 4 entries");
 
 		sessionDetails.forEach((currentSessionDetails, i) => {
-			if (i === 0 || currentSessionDetails === UNKNOWN_SESSION_DETAILS)
+			if (i === 0 || currentSessionDetails.created === null || sessionDetails[i - 1].created === null)
 				return;
 
 			expect(currentSessionDetails.lastActivity).toBeLessThan(sessionDetails[i - 1].lastActivity, "currentSessionDetails.lastActivity should be less than that of i - 1");
 		});
 
-		expect(sessionDetails[3]).toBe(UNKNOWN_SESSION_DETAILS, "sessionDetails[3] should be UNKNOWN_SESSION_DETAILS");
+		Object.values(sessionDetails[3]).forEach(value => expect(value).toBeNull());
 	});
 
 	it("should be possible to paginate result", async () => {
@@ -46,8 +46,8 @@ describe("GetSessionDetailsByUserIdHandler", () => {
 			message: {
 				data: {
 					userId: sessions[0].userId,
-					page: 1,
-					pageSize: 2
+					start: 2,
+					limit: 2
 				}
 			}
 		});
@@ -57,13 +57,13 @@ describe("GetSessionDetailsByUserIdHandler", () => {
 		expect(sessionDetails.length).toBe(2, "sessionDetails should contain 2 entries");
 
 		sessionDetails.forEach((currentSessionDetails, i) => {
-			if (i === 0 || currentSessionDetails === UNKNOWN_SESSION_DETAILS)
+			if (i === 0 || currentSessionDetails.created === null || sessionDetails[i - 1].created === null)
 				return;
 
 			expect(currentSessionDetails.lastActivity).toBeLessThan(sessionDetails[i - 1].lastActivity, "currentSessionDetails.lastActivity should be less than that of i - 1");
 		});
 
-		expect(sessionDetails[1]).toBe(UNKNOWN_SESSION_DETAILS, "sessionDetails[1] should be UNKNOWN_SESSION_DETAILS");
+		Object.values(sessionDetails[1]).forEach(value => expect(value).toBeNull());
 	});
 
 	it("should be possible to sort result", async () => {
@@ -84,7 +84,7 @@ describe("GetSessionDetailsByUserIdHandler", () => {
 		expect(sessionDetails.length).toBe(4, "sessionDetails should contain 4 entries");
 
 		sessionDetails.forEach((currentSessionDetails, i) => {
-			if (i === 0 || currentSessionDetails === UNKNOWN_SESSION_DETAILS)
+			if (i === 0 || currentSessionDetails.created === null || sessionDetails[i - 1].created === null)
 				return;
 
 			expect(currentSessionDetails.created).toBeLessThan(sessionDetails[i - 1].created, "currentSessionDetails.created should be less than that of i - 1");
@@ -110,7 +110,7 @@ describe("GetSessionDetailsByUserIdHandler", () => {
 		expect(sessionDetails.length).toBe(4, "sessionDetails should contain 4 entries");
 
 		sessionDetails.forEach((currentSessionDetails, i) => {
-			if (i === 0 || currentSessionDetails === UNKNOWN_SESSION_DETAILS || sessionDetails[i - 1] === UNKNOWN_SESSION_DETAILS)
+			if (i === 0 || currentSessionDetails.created === null || sessionDetails[i - 1].created === null)
 				return;
 
 			expect(currentSessionDetails.created).toBeGreaterThan(sessionDetails[i - 1].created, "currentSessionDetails.created should be less than that of i - 1");

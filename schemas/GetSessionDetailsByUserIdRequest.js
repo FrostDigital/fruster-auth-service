@@ -13,18 +13,18 @@ module.exports = {
 		},
 		sortOrder: {
 			type: "integer",
-			default: -1,
-			description: "defaults to -1"
+			description: "defaults to -1",
+			enum: [1, -1]
 		},
-		page: {
+		start: {
 			type: "integer",
-			default: 0,
-			description: "defaults to 0"
+			description: "defaults to 0",
+			minimum: 0
 		},
-		pageSize: {
+		limit: {
 			type: "integer",
-			default: 1000,
-			description: "defaults to 1000"
+			description: "defaults to 1000",
+			minimum: 1
 		}
 	},
 	required: ["userId"]
