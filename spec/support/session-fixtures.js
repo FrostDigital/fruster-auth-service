@@ -20,7 +20,7 @@ const sessions = [
 			created: new Date("1994-06-11T12:32:20.699Z"),
 			lastActivity: new Date("1995-06-11T12:32:20.699Z")
 		},
-		expires: new Date("2020-06-20T14:44:56.191Z")
+		expires: new Date(Date.now() + 10000)
 	},
 
 	// App w/ another version
@@ -33,37 +33,38 @@ const sessions = [
 			created: new Date(),
 			lastActivity: new Date()
 		},
-		expires: new Date("2020-06-20T18:14:19.554Z")
+		expires: new Date(Date.now() + 10000)
 	},
 
 	// Desktop
 	{
 		id: "0369d87c7b4870b9f9d7b3f794a252c060e7dedcf442a4c00ba80e718ae43246d5934142bb9bf1570dc62cd1d49662d974b1a7bcf7025066b59dcf5d6c8543c1",
 		userId: "707dea14-b56f-4444-be57-4ac96a74aad8",
-		expires: new Date("2020-06-11T12:32:20.699Z"),
 		sessionDetails: {
 			userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:77.0) Gecko/20100101 Firefox/77.00",
 			created: new Date("1999-06-11T12:32:20.699Z"),
 			lastActivity: new Date("2000-06-11T12:32:20.699Z")
-		}
+		},
+		expires: new Date(Date.now() + 10000)
 	},
 
 	// Old session without sessionDetails (this will only happen if user hasn't had any activity since this update).
 	{
 		id: "0369d87c7b4870b9f9d7b3f794a252c060e7dedcf442a4c00ba80e718ae43246d5934142bb9bf1570dc62cd1d49662d974b1a7bcf7025066b59dcf5d6c8543c1",
 		userId: "707dea14-b56f-4444-be57-4ac96a74aad8",
-		expires: new Date("2020-06-11T12:32:20.699Z")
+		expires: new Date(Date.now() + 10000)
 	},
 
 	// Another user
 	{
 		id: "0369d87c7b4870b9f9d7b3f794a252c060e7dedcf442a4c00ba80e718ae43246d5934142bb9bf1570dc62cd1d49662d974b1a7bcf7025066b59dcf5d6c8543c1",
-		expires: new Date("2020-06-11T12:32:20.699Z"),
+
 		sessionDetails: {
 			userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:77.0) Gecko/20100101 Firefox/77.00",
 			created: new Date(),
 			lastActivity: new Date()
-		}
+		},
+		expires: new Date(Date.now() + 10000)
 	}
 
 ];

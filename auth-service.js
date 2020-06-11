@@ -39,7 +39,7 @@ module.exports.start = async (busAddress, mongoUrl) => {
 	const cookieLoginHandler = new CookieLoginHandler(jwtManager);
 	const tokenLoginHandler = new TokenLoginHandler(refreshTokenRepo, jwtManager);
 	const convertTokenToCookieHandler = new ConvertTokenToCookieHandler(jwtManager);
-	const refreshTokenHandler = new RefreshTokenHandler(refreshTokenRepo, jwtManager);
+	const refreshTokenHandler = new RefreshTokenHandler(refreshTokenRepo, jwtManager, sessionRepo);
 	const generateJWTTokenHandler = new GenerateJWTTokenHandler(tokenLoginHandler, cookieLoginHandler);
 	const decodeTokenHandler = new DecodeTokenHandler(jwtManager);
 	const logOutUsersByIdHandler = new LogOutUsersByIdHandler(jwtManager);

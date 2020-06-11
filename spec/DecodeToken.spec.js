@@ -8,7 +8,6 @@ const constants = require('../lib/constants');
 const JWTManager = require("../lib/managers/JWTManager");
 const SessionRepo = require("../lib/repos/SessionRepo");
 
-
 describe("Decode and validate token", () => {
 
 	/** @type {Db} */

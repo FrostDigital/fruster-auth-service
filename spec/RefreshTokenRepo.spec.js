@@ -8,9 +8,7 @@ describe("Refresh token repo", () => {
 
 	frusterTestUtils
 		.startBeforeEach(specConstants
-			.testUtilsOptions(async ({ db }) => {
-				repo = new RefreshTokenRepo(db);
-			}));
+			.testUtilsOptions(async ({ db }) => repo = new RefreshTokenRepo(db)));
 
 	it("should create refresh token", async () => {
 		const ttlMs = 1000;
