@@ -12,7 +12,7 @@ const SessionRepo = require("../lib/repos/SessionRepo");
 const SpecUtils = require("./support/SpecUtils");
 const specConstants = require("./support/spec-constants");
 const mocks = require("./support/mocks");
-
+const log = require("fruster-log");
 
 describe("Cookie login", () => {
 
@@ -200,6 +200,74 @@ describe("Cookie login", () => {
 		const decodedJWT = await jwtManager.decode(jwtCookie);
 
 		expect(session.id).toBe(crypto.createHmac("sha512", `${decodedJWT.exp} ${user.id}${decodedJWT.salt}`).digest("hex"));
+	});
+
+	it("should save session details in session on login", async done => {
+		const reqId = "a-req-id";
+		const username = "joelsoderstrom";
+		const password = "ZlatansPonyTail";
+		const userAgent = "wellbee%20Test/1184 CFNetwork/1125.2 Darwin/19.4.0";
+		const version = "13.4.1";
+
+		const user = {
+			id: "id",
+			firstName: "firstName",
+			lastName: "lastName",
+			email: "email"
+		};
+
+		const mockValidatePassword = frusterTestUtils.mockService({
+			subject: UserServiceClient.endpoints.VALIDATE_PASSWORD,
+			response: {
+				data: { id: user.id }
+			}
+		});
+
+		const mockGetUsersByQuery = frusterTestUtils.mockService({
+			subject: UserServiceClient.endpoints.GET_USERS_BY_QUERY,
+			response: {
+				data: {
+					users: [user],
+					totalCount: 1
+				}
+			}
+		});
+
+		try {
+			const resp = await bus.request({
+				subject: constants.endpoints.http.LOGIN_WITH_COOKIE,
+				message: {
+					reqId: reqId,
+					data: { username, password },
+					headers: {
+						"user-agent": userAgent,
+						version
+					}
+				}
+			});
+
+			expect(mockValidatePassword.requests[0].data.username).toBe(username, "mockValidatePassword.requests[0].data.username");
+			expect(mockValidatePassword.requests[0].data.password).toBe(password, "mockValidatePassword.requests[0].data.password");
+
+			expect(mockGetUsersByQuery.requests[0].data.query.id).toBe(user.id, "mockGetUsersByQuery.requests[0].data.query.id");
+
+			const session = await db.collection(constants.collection.SESSIONS).findOne({ userId: user.id });
+
+			expect(session).toBeDefined("session");
+			expect(session.sessionDetails.userAgent).toBe(userAgent, "session.sessionDetails.userAgent");
+			expect(session.sessionDetails.version).toBe(version, "session.sessionDetails.version");
+			expect(session.sessionDetails.created).toBeDefined("session.sessionDetails.created");
+
+			const jwtCookie = cookie.parse(resp.headers["Set-Cookie"])[conf.jwtCookieName];
+			const decodedJWT = await jwtManager.decode(jwtCookie);
+
+			expect(session.id).toBe(crypto.createHmac("sha512", `${decodedJWT.exp} ${user.id}${decodedJWT.salt}`).digest("hex"));
+
+			done();
+		} catch (err) {
+			log.error(err);
+			done.fail();
+		}
 	});
 
 	it("should return 401 if invalid username or password", async done => {

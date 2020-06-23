@@ -9,6 +9,7 @@ const JWTManager = require("../lib/managers/JWTManager");
 const specConstants = require("./support/spec-constants");
 const mocks = require("./support/mocks");
 const SpecUtils = require("./support/SpecUtils");
+const log = require("fruster-log");
 
 describe("Token login service", () => {
 
@@ -71,6 +72,46 @@ describe("Token login service", () => {
 		expect(token.expires.getTime()).not.toBeLessThan(now);
 		expect(token.expired).toBe(false);
 	});
+
+	it("should save session details in session on login", async done => {
+		const reqId = "a-req-id";
+		const userAgent = "wellbee%20Test/1184 CFNetwork/1125.2 Darwin/19.4.0";
+		const version = "13.4.1";
+
+		mocks.getUsers([{ id: "id", firstName: "firstName", lastName: "lastName", email: "email" }])
+		mocks.validatePassword();
+
+		try {
+			const { status, reqId: resReqId, data } = await bus.request({
+				subject: constants.endpoints.http.LOGIN_WITH_TOKEN,
+				skipOptionsRequest: true,
+				message: {
+					reqId: reqId,
+					data: {
+						username: "joelsoderstrom",
+						password: "ZlatansPonyTail"
+					},
+					headers: {
+						"user-agent": userAgent,
+						version
+					}
+				}
+			});
+
+			const session = await db.collection(constants.collection.SESSIONS).findOne({ userId: "id" });
+
+			expect(session).toBeDefined("session");
+			expect(session.sessionDetails.userAgent).toBe(userAgent, "session.sessionDetails.userAgent");
+			expect(session.sessionDetails.version).toBe(version, "session.sessionDetails.version");
+			expect(session.sessionDetails.created).toBeDefined("session.sessionDetails.created");
+
+			done();
+		} catch (err) {
+			log.error(err);
+			done.fail();
+		}
+	});
+
 
 	it("should return 401 if invalid username or password", async done => {
 		const reqId = "a-req-id";
