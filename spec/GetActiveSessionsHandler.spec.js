@@ -1,4 +1,7 @@
-const { collection: { SESSIONS }, endpoints: { http: { GET_ACTIVE_SESSIONS } } } = require("../lib/constants");
+const {
+	collection: { SESSIONS },
+	endpoints: { http: { GET_ACTIVE_SESSIONS } }
+} = require("../lib/constants");
 const specConstants = require("./support/spec-constants");
 const SessionFixtures = require("./support/session-fixtures");
 const frusterTestUtils = require("fruster-test-utils");
@@ -6,7 +9,6 @@ const bus = require("fruster-bus").testBus;
 const Db = require("mongodb").Db;
 
 describe("GetActiveSessionsHandler", () => {
-
 	const user = {
 		id: SessionFixtures.sessions[0].userId,
 		scopes: ["just-since-it's-required"]
@@ -125,11 +127,12 @@ describe("GetActiveSessionsHandler", () => {
 			...SessionFixtures.sessions,
 			{
 				...SessionFixtures.sessions[0],
+				id: "064ac7b6ae4f366ee9b14dea4b58f25bb6c64cc6529b3288e693a576cb889271e6a60a237a0d6156a185966df527edef2bf7b1108d0c5ed614ed488dd0d80e7a",
 				expires: new Date("1970-01-01T00:00:00.001Z")
-			}]
+			}
+		]
 
 		await db.collection(SESSIONS).insertMany(sessionsToInsert);
-
 
 		const { status, data: { sessions, totalCount } } = await bus.request({
 			subject: GET_ACTIVE_SESSIONS,
