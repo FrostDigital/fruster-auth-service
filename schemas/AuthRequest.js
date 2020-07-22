@@ -1,5 +1,6 @@
 module.exports = {
 	id: "AuthRequest",
+	additionalProperties: true,
 	properties: {
 		username: {
 			type: "string",
