@@ -1,14 +1,13 @@
-const bus = require("fruster-bus");
+const Db = require("mongodb").Db;
 const cookie = require("cookie");
-const log = require("fruster-log");
-const authService = require("../auth-service");
+const bus = require("fruster-bus").testBus;
+const frusterTestUtils = require("fruster-test-utils");
 const constants = require("../lib/constants");
-const testUtils = require("fruster-test-utils");
 const RefreshTokenRepo = require("../lib/repos/RefreshTokenRepo");
-const UserServiceClient = require("../lib/clients/UserServiceClient");
 const SessionRepo = require("../lib/repos/SessionRepo");
 const JWTManager = require("../lib/managers/JWTManager");
-const Db = require("mongodb").Db;
+const specConstants = require("./support/spec-constants");
+const mocks = require("./support/mocks");
 
 
 describe("Generate JWT token", () => {
@@ -21,122 +20,85 @@ describe("Generate JWT token", () => {
 
 	/** @type {SessionRepo} */
 	let sessionRepo;
+
 	/** @type {JWTManager} */
 	let jwtManager;
 
-	testUtils.startBeforeEach({
-		mongoUrl: "mongodb://localhost:27017/generate-jwt-token-test",
-		service: authService,
-		bus: bus,
-		mockNats: true,
-		afterStart: (connection) => {
-			db = connection.db;
-			refreshTokenRepo = new RefreshTokenRepo(db);
+	frusterTestUtils
+		.startBeforeEach(specConstants
+			.testUtilsOptions(async (connection) => {
+				db = connection.db;
+				refreshTokenRepo = new RefreshTokenRepo(db);
 
-			sessionRepo = new SessionRepo(db);
-			jwtManager = new JWTManager(sessionRepo);
-		}
+				sessionRepo = new SessionRepo(db);
+				jwtManager = new JWTManager(sessionRepo);
+			}));
+
+	it("should generate JWT token for token/app auth", async () => {
+		mocks.getUsers([{
+			roles: ["admin"],
+			firstName: "firstName",
+			middleName: "middleName",
+			lastName: "lastName",
+			email: "email",
+			id: "id",
+		}]);
+
+		const { status, reqId, data } = await bus.request({
+			subject: constants.endpoints.service.GENERATE_TOKEN_FOR_USER_TOKEN,
+			skipOptionsRequest: true,
+			message: {
+				reqId: "reqId",
+				data: { firstName: "viktor" }
+			}
+		});
+
+		expect(status).toBe(200);
+		expect(reqId).toBe("reqId");
+		expect(data.accessToken).toBeDefined();
+		expect(data.refreshToken).toBeDefined();
+		expect(data.profile.id).toBe("id");
+		expect(data.profile.firstName).toBe("firstName");
+
+		const decodedJWT = await jwtManager.decode(data.accessToken);
+
+		expect(decodedJWT.id).toBe("id");
+		const token = await refreshTokenRepo.get(data.refreshToken, false);
+
+		expect(token).toBeTruthy("should gotten refreshToken " + data.refreshToken);
+		expect(token.userId).toBe("id");
+		expect(token.expires).toBeDefined();
+		expect(token.expired).toBe(false);
 	});
 
-	it("should generate JWT token for token/app auth", async done => {
-		try {
-			bus.subscribe(UserServiceClient.endpoints.GET_USER, () => {
-				return {
-					status: 200,
-					data: {
-						users: [{
-							roles: ["admin"],
-							firstName: "firstName",
-							middleName: "middleName",
-							lastName: "lastName",
-							email: "email",
-							id: "id",
-						}],
-						totalCount: 1
-					},
-					error: {},
-					reqId: "reqId"
-				};
-			});
+	it("should generate JWT token for cookie/web auth", async () => {
+		mocks.getUsers([{
+			roles: ["admin"],
+			firstName: "firstName",
+			middleName: "middleName",
+			lastName: "lastName",
+			email: "email",
+			id: "id",
+		}]);
 
-			const resp = await bus.request({
-				subject: constants.endpoints.service.GENERATE_TOKEN_FOR_USER_TOKEN,
-				skipOptionsRequest: true,
-				message: {
-					reqId: "reqId",
-					data: { firstName: "viktor" }
-				}
-			});
+		const { status, reqId, headers } = await bus.request({
+			subject: constants.endpoints.service.GENERATE_TOKEN_FOR_USER_COOKIE,
+			skipOptionsRequest: true,
+			message: {
+				reqId: "reqId",
+				data: { firstName: "viktor" }
+			}
+		});
 
-			expect(resp.status).toBe(200);
-			expect(resp.reqId).toBe("reqId");
-			expect(resp.data.accessToken).toBeDefined();
-			expect(resp.data.refreshToken).toBeDefined();
-			expect(resp.data.profile.id).toBe("id");
-			expect(resp.data.profile.firstName).toBe("firstName");
+		expect(status).toBe(200);
+		expect(reqId).toBe("reqId");
+		expect(headers["Set-Cookie"]).toBeDefined();
 
-			const decodedJWT = await jwtManager.decode(resp.data.accessToken);
+		const jwtCookie = cookie.parse(headers["Set-Cookie"]).jwt;
+		const decodedJWT = await jwtManager.decode(jwtCookie);
 
-			expect(decodedJWT.id).toBe("id");
-			const token = await refreshTokenRepo.get(resp.data.refreshToken, false);
-
-			expect(token).toBeTruthy("should gotten refreshToken " + resp.data.refreshToken);
-			expect(token.userId).toBe("id");
-			expect(token.expires).toBeDefined();
-			expect(token.expired).toBe(false);
-
-			done();
-		} catch (err) {
-			log.error(err);
-			done.fail(err);
-		}
-	});
-
-	it("should generate JWT token for cookie/web auth", async done => {
-		try {
-			bus.subscribe(UserServiceClient.endpoints.GET_USER, () => {
-				return {
-					status: 200,
-					data: {
-						users: [{
-							roles: ["admin"],
-							firstName: "firstName",
-							middleName: "middleName",
-							lastName: "lastName",
-							email: "email",
-							id: "id",
-						}],
-						totalCount: 1
-					},
-					error: {},
-					reqId: "reqId"
-				};
-			});
-
-			const resp = await bus.request({
-				subject: constants.endpoints.service.GENERATE_TOKEN_FOR_USER_COOKIE,
-				skipOptionsRequest: true,
-				message: {
-					reqId: "reqId",
-					data: { firstName: "viktor" }
-				}
-			});
-
-			expect(resp.status).toBe(200);
-			expect(resp.reqId).toBe("reqId");
-			expect(resp.headers["Set-Cookie"]).toBeDefined();
-
-			const jwtCookie = cookie.parse(resp.headers["Set-Cookie"]).jwt;
-			const decodedJWT = await jwtManager.decode(jwtCookie);
-
-			expect(decodedJWT.id).toBe("id");
-			expect(decodedJWT.exp).toBeDefined();
-
-			done();
-		} catch (err) {
-			log.error(err);
-			done.fail(err);
-		}
+		expect(decodedJWT.id).toBe("id");
+		expect(decodedJWT.exp).toBeDefined();
 	});
 
 });

@@ -1,15 +1,12 @@
-const bus = require("fruster-bus");
-const cookie = require("cookie");
-const log = require("fruster-log");
-const authService = require("../auth-service");
-const conf = require("../conf");
-const testUtils = require("fruster-test-utils");
-const mocks = require("./support/mocks");
-const constants = require('../lib/constants');
 const Db = require("mongodb").Db;
+const bus = require("fruster-bus").testBus;
+const frusterTestUtils = require("fruster-test-utils");
+const conf = require("../conf");
+const mocks = require("./support/mocks");
+const specConstants = require("./support/spec-constants");
+const constants = require('../lib/constants');
 const JWTManager = require("../lib/managers/JWTManager");
 const SessionRepo = require("../lib/repos/SessionRepo");
-
 
 describe("Decode and validate token", () => {
 
@@ -22,100 +19,77 @@ describe("Decode and validate token", () => {
 	/** @type {JWTManager} */
 	let jwtManager;
 
-	testUtils.startBeforeEach({
-		mongoUrl: "mongodb://localhost:27017/decode-token-test",
-		service: authService,
-		bus: bus,
-		mockNats: true,
-		afterStart: connection => {
-			db = connection.db;
-			sessionRepo = new SessionRepo(db);
-			jwtManager = new JWTManager(sessionRepo);
-		}
+	frusterTestUtils
+		.startBeforeEach(specConstants
+			.testUtilsOptions(async (connection) => {
+				db = connection.db;
+				sessionRepo = new SessionRepo(db);
+				jwtManager = new JWTManager(sessionRepo);
+			}));
+
+	it("should decode jwt token", async () => {
+		const reqId = "a-req-id";
+		const encodedToken = await jwtManager.encode({ id: "userId" }, 5000);
+
+		mocks.getUsers([{ id: "userId", foo: "bar" }]);
+
+		const { data, reqId: resReqId } = await bus.request({
+			subject: constants.endpoints.service.DECODE_TOKEN,
+			skipOptionsRequest: true,
+			message: {
+				reqId: reqId,
+				data: encodedToken
+			}
+		});
+
+		expect(data.foo).toBe("bar");
+		expect(resReqId).toBe(reqId);
 	});
 
-	it("should decode jwt token", async done => {
-		try {
-			const reqId = "a-req-id";
-			const encodedToken = await jwtManager.encode({ id: "userId" }, 5000);
+	it("should decode old jwt tokens", async () => {
+		const reqId = "a-req-id";
+		const encodedToken = await jwtManager.encode({ id: "userId" }, (-conf.accessTokenTTL) + 10);
 
-			mocks.getUsers([{ id: "userId", foo: "bar" }]);
+		await db.collection(constants.collection.SESSIONS).remove({ userId: "userId" });
 
-			const resp = await bus.request({
-				subject: constants.endpoints.service.DECODE_TOKEN,
-				skipOptionsRequest: true,
-				message: {
-					reqId: reqId,
-					data: encodedToken
-				}
-			});
+		mocks.getUsers([{ id: "userId", foo: "bar" }]);
 
-			expect(resp.data.foo).toBe("bar");
-			expect(resp.reqId).toBe(reqId);
+		const { data, reqId: resReqId } = await bus.request({
+			subject: constants.endpoints.service.DECODE_TOKEN,
+			skipOptionsRequest: true,
+			message: {
+				reqId: reqId,
+				data: encodedToken
+			}
+		});
 
-			done();
-		} catch (err) {
-			log.error(err);
-			done.fail(err);
-		}
-	});
-
-	it("should decode old jwt tokens", async done => {
-		try {
-			const reqId = "a-req-id";
-			const encodedToken = await jwtManager.encode({ id: "userId" }, (-conf.accessTokenTTL) + 10);
-
-			await db.collection(constants.collection.SESSIONS).remove({ userId: "userId" });
-
-			mocks.getUsers([{ id: "userId", foo: "bar" }]);
-
-			const resp = await bus.request({
-				subject: constants.endpoints.service.DECODE_TOKEN,
-				skipOptionsRequest: true,
-				message: {
-					reqId: reqId,
-					data: encodedToken
-				}
-			});
-
-			expect(resp.data.foo).toBe("bar");
-			expect(resp.reqId).toBe(reqId);
-
-			done();
-		} catch (err) {
-			log.error(err);
-			done.fail(err);
-		}
+		expect(data.foo).toBe("bar");
+		expect(resReqId).toBe(reqId);
 	});
 
 	it("should fail to decode jwt token if user does not exist anymore", async done => {
+		const reqId = "a-req-id";
+		const encodedToken = await jwtManager.encode({ id: "userId" }, 5000);
+
+		mocks.getUsers([]);
+
 		try {
-			const reqId = "a-req-id";
-			const encodedToken = await jwtManager.encode({ id: "userId" }, 5000);
+			await bus.request({
+				subject: constants.endpoints.service.DECODE_TOKEN,
+				skipOptionsRequest: true,
+				message: {
+					reqId,
+					data: encodedToken
+				}
+			});
 
-			mocks.getUsers([]);
+			done.fail();
+		} catch ({ status, reqId, error }) {
+			expect(status).toBe(403);
+			expect(reqId).toBe(reqId);
+			expect(error.detail).toMatch("does not exist");
 
-			try {
-				await bus.request({
-					subject: constants.endpoints.service.DECODE_TOKEN,
-					skipOptionsRequest: true,
-					message: {
-						reqId,
-						data: encodedToken
-					}
-				});
-
-				done.fail();
-			} catch (err) {
-				expect(err.status).toBe(403);
-				expect(err.reqId).toBe(reqId);
-				expect(err.error.detail).toMatch("does not exist");
-
-				done();
-			}
-		} catch (err) {
-			log.error(err);
-			done.fail(err);
+			done();
 		}
 	});
 
@@ -134,10 +108,10 @@ describe("Decode and validate token", () => {
 			});
 
 			done.fail();
-		} catch (err) {
-			expect(err.status).toBe(403);
-			expect(err.reqId).toBe(reqId);
-			expect(err.error.detail).toBeDefined();
+		} catch ({ status, reqId, error }) {
+			expect(status).toBe(403);
+			expect(reqId).toBe(reqId);
+			expect(error.detail).toBeDefined();
 
 			done();
 		}
@@ -158,53 +132,48 @@ describe("Decode and validate token", () => {
 			});
 
 			done.fail();
-		} catch (err) {
-			expect(err.status).toBe(403);
-			expect(err.reqId).toBe(reqId);
-			expect(err.error.detail).toBe("Token expired");
+		} catch ({ status, reqId, error }) {
+			expect(status).toBe(403);
+			expect(reqId).toBe(reqId);
+			expect(error.detail).toBe("Token expired");
 
 			done();
 		}
 	});
 
 	it("should fail to decode jwt token if session has ended", async done => {
+		const reqId = "a-req-id";
+		const user = {
+			id: "userId", scopes: ["system.logout"], roles: ["user"]
+		};
+		const encodedToken = await jwtManager.encode({ id: user.id }, 5000);
+
+		mocks.getUsers([]);
+
+		await bus.request({
+			subject: constants.endpoints.http.LOGOUT,
+			message: {
+				reqId, user,
+				headers: { authorization: `Bearer ${encodedToken}` }
+			}
+		});
+
 		try {
-			const reqId = "a-req-id";
-			const user = {
-				id: "userId", scopes: ["system.logout"], roles: ["user"]
-			};
-			const encodedToken = await jwtManager.encode({ id: user.id }, 5000);
-
-			mocks.getUsers([]);
-
 			await bus.request({
-				subject: constants.endpoints.http.LOGOUT,
+				subject: constants.endpoints.service.DECODE_TOKEN,
+				skipOptionsRequest: true,
 				message: {
-					reqId, user,
-					headers: { authorization: `Bearer ${encodedToken}` }
+					reqId, data: encodedToken
 				}
 			});
 
-			try {
-				await bus.request({
-					subject: constants.endpoints.service.DECODE_TOKEN,
-					skipOptionsRequest: true,
-					message: {
-						reqId, data: encodedToken
-					}
-				});
+			done.fail();
+		} catch ({ status, reqId, error }) {
+			expect(status).toBe(403);
+			expect(reqId).toBe(reqId);
+			expect(error.title).toBeDefined();
 
-				done.fail();
-			} catch (err) {
-				expect(err.status).toBe(403);
-				expect(err.reqId).toBe(reqId);
-				expect(err.error.title).toBeDefined();
-
-				done();
-			}
-		} catch (err) {
-			log.error(err);
-			done.fail(err);
+			done();
 		}
 	});
 

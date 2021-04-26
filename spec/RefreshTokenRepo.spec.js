@@ -1,82 +1,53 @@
-const testUtils = require("fruster-test-utils");
-const bus = require("fruster-bus");
+const frusterTestUtils = require("fruster-test-utils");
 const RefreshTokenRepo = require("../lib/repos/RefreshTokenRepo");
-const log = require("fruster-log");
-
+const specConstants = require("./support/spec-constants");
 
 describe("Refresh token repo", () => {
 
 	let repo;
 
-	testUtils.startBeforeAll({
-		mongoUrl: "mongodb://localhost:27017/refreshTokenRepo-test",
-		bus: bus,
-		mockNats: true,
-		afterStart: (connection) => {
-			repo = new RefreshTokenRepo(connection.db);
-		}
+	frusterTestUtils
+		.startBeforeEach(specConstants
+			.testUtilsOptions(async ({ db }) => repo = new RefreshTokenRepo(db)));
+
+	it("should create refresh token", async () => {
+		const ttlMs = 1000;
+		const userId = "userId";
+		const createdRefreshToken = await repo.create(userId, ttlMs);
+
+		expect(createdRefreshToken._id).toBeUndefined();
+		expect(createdRefreshToken.id).toBeDefined();
+		expect(createdRefreshToken.token).toBeDefined();
+		expect(createdRefreshToken.userId).toBe(userId);
+		expect(createdRefreshToken.expired).toBe(false);
+		expect(createdRefreshToken.expires.getTime()).toBeGreaterThan(Date.now());
+		expect(createdRefreshToken.expires.getTime()).toBeLessThan(Date.now() + ttlMs + 1);
 	});
 
-	it("should create refresh token", async done => {
-		try {
-			const ttlMs = 1000;
-			const userId = "userId";
-			const createdRefreshToken = await repo.create(userId, ttlMs);
+	it("should get refresh token", async () => {
+		const ttlMs = 1000;
+		const userId = "userId";
 
-			expect(createdRefreshToken._id).toBeUndefined();
-			expect(createdRefreshToken.id).toBeDefined();
-			expect(createdRefreshToken.token).toBeDefined();
-			expect(createdRefreshToken.userId).toBe(userId);
-			expect(createdRefreshToken.expired).toBe(false);
-			expect(createdRefreshToken.expires.getTime()).toBeGreaterThan(Date.now());
-			expect(createdRefreshToken.expires.getTime()).toBeLessThan(Date.now() + ttlMs + 1);
+		const createdRefreshToken = await repo.create(userId, ttlMs);
+		const gottenRefreshToken = await repo.get(createdRefreshToken.token);
 
-			done();
-		} catch (err) {
-			log.error(err);
-			done.fail(err);
-		}
+		expect(gottenRefreshToken.id).toBeDefined();
+		expect(gottenRefreshToken.token).toBeDefined();
+		expect(gottenRefreshToken.userId).toBe(userId);
+		expect(gottenRefreshToken._id).toBeUndefined();
+		expect(gottenRefreshToken.expires.getTime()).toBeGreaterThan(Date.now());
 	});
 
-	it("should get refresh token", async done => {
-		try {
-			const ttlMs = 1000;
-			const userId = "userId";
+	it("should expire refresh token", async () => {
+		const ttlMs = 1000;
+		const userId = "userId";
 
-			const createdRefreshToken = await repo.create(userId, ttlMs);
-			const gottenRefreshToken = await repo.get(createdRefreshToken.token);
+		const createdRefreshToken = await repo.create(userId, ttlMs);
+		const expiredRefreshToken = await repo.expire(createdRefreshToken.token);
 
-			expect(gottenRefreshToken.id).toBeDefined();
-			expect(gottenRefreshToken.token).toBeDefined();
-			expect(gottenRefreshToken.userId).toBe(userId);
-			expect(gottenRefreshToken._id).toBeUndefined();
-			expect(gottenRefreshToken.expires.getTime()).toBeGreaterThan(Date.now());
-			expect(gottenRefreshToken.expires.getTime()).toBeLessThan(Date.now() + ttlMs + 1);
-
-			done();
-		} catch (err) {
-			log.error(err);
-			done.fail(err);
-		}
-	});
-
-	it("should expire refresh token", async done => {
-		try {
-			const ttlMs = 1000;
-			const userId = "userId";
-
-			const createdRefreshToken = await repo.create(userId, ttlMs);
-			const expiredRefreshToken = await repo.expire(createdRefreshToken.token);
-
-			expect(expiredRefreshToken.id).toBeDefined();
-			expect(expiredRefreshToken._id).toBeUndefined();
-			expect(expiredRefreshToken.expired).toBe(true);
-
-			done();
-		} catch (err) {
-			log.error(err);
-			done.fail(err);
-		}
+		expect(expiredRefreshToken.id).toBeDefined();
+		expect(expiredRefreshToken._id).toBeUndefined();
+		expect(expiredRefreshToken.expired).toBe(true);
 	});
 
 	it("should fail to expire refresh token if it does not exist", async done => {

@@ -1,18 +1,18 @@
-const bus = require("fruster-bus");
+const crypto = require("crypto");
 const cookie = require("cookie");
-const log = require("fruster-log");
-const authService = require("../auth-service");
+const Db = require("mongodb").Db;
+const bus = require("fruster-bus").testBus;
+const frusterTestUtils = require("fruster-test-utils");
 const conf = require("../conf");
 const errors = require("../lib/deprecatedErrors");
 const constants = require("../lib/constants");
-const testUtils = require("fruster-test-utils");
 const UserServiceClient = require("../lib/clients/UserServiceClient");
-const Db = require("mongodb").Db;
 const JWTManager = require("../lib/managers/JWTManager");
 const SessionRepo = require("../lib/repos/SessionRepo");
-const crypto = require("crypto");
 const SpecUtils = require("./support/SpecUtils");
-
+const specConstants = require("./support/spec-constants");
+const mocks = require("./support/mocks");
+const log = require("fruster-log");
 
 describe("Cookie login", () => {
 
@@ -25,187 +25,117 @@ describe("Cookie login", () => {
 	/** @type {JWTManager} */
 	let jwtManager;
 
-	testUtils.startBeforeEach({
-		mongoUrl: "mongodb://localhost:27017/cookie-login-test",
-		service: authService,
-		bus: bus,
-		mockNats: true,
-		afterStart: connection => {
-			db = connection.db;
-			sessionRepo = new SessionRepo(db);
-			jwtManager = new JWTManager(sessionRepo);
-		}
-	});
+	frusterTestUtils
+		.startBeforeEach(specConstants
+			.testUtilsOptions(async (connection) => {
+				db = connection.db;
+				sessionRepo = new SessionRepo(db);
+				jwtManager = new JWTManager(sessionRepo);
+			}));
 
 	afterEach(() => SpecUtils.resetConfig());
 
-	it("should login and return JWT as cookie", async done => {
+	it("should login and return JWT as cookie", async () => {
 		const reqId = "a-req-id";
 		const username = "joelsoderstrom";
 		const password = "ZlatansPonyTail";
 
-		testUtils.mockService({
-			subject: UserServiceClient.endpoints.GET_USER,
-			data: {
-				users: [{
-					id: "id",
-					firstName: "firstName",
-					lastName: "lastName",
-					email: "email"
-				}],
-				totalCount: 1
+		mocks.getUsers([{ id: "id", firstName: "firstName", lastName: "lastName", email: "email" }])
+		mocks.validatePassword();
+
+		const { status, reqId: resReqId, headers } = await bus.request({
+			subject: constants.endpoints.http.LOGIN_WITH_COOKIE,
+			skipOptionsRequest: true,
+			message: {
+				reqId: reqId,
+				data: { username, password }
 			}
 		});
 
-		testUtils.mockService({
-			subject: UserServiceClient.endpoints.VALIDATE_PASSWORD,
-			data: [{ id: "id" }],
-			expectData: { username, password }
+		expect(status).toBe(200);
+		expect(resReqId).toBe(reqId);
+		expect(headers["Set-Cookie"]).toBeDefined();
+		expect(headers["Set-Cookie"]).not.toMatch("domain");
+		expect(headers["Set-Cookie"]).toMatch("HttpOnly;");
+
+		const jwtCookie = cookie.parse(headers["Set-Cookie"])[conf.jwtCookieName];
+		const decodedJWT = await jwtManager.decode(jwtCookie);
+
+		expect(decodedJWT.id).toBe("id");
+		expect(decodedJWT.exp).toBeDefined();
+	});
+
+	it("should use legacy get user call if custom endpoint is configured", async () => {
+		const getUserSubject = "get-user-from-finland";
+		conf.userServiceGetUserSubject = getUserSubject
+
+		const username = "joelsoderstrom";
+		const password = "ZlatansPonyTail";
+
+		frusterTestUtils.mockService({
+			subject: getUserSubject,
+			response: ({ data }) => {
+				expect(data.id).toBeDefined("req.data.id");
+
+				return { status: 200, data: { users: [{}] } };
+			}
 		});
 
-		try {
-			const resp = await bus.request({
-				subject: constants.endpoints.http.LOGIN_WITH_COOKIE,
-				skipOptionsRequest: true,
-				message: {
-					reqId: reqId,
-					data: { username, password }
-				}
-			});
+		mocks.validatePassword();
 
-			expect(resp.status).toBe(200);
-			expect(resp.reqId).toBe(reqId);
-			expect(resp.headers["Set-Cookie"]).toBeDefined();
-			expect(resp.headers["Set-Cookie"]).not.toMatch("domain");
-			expect(resp.headers["Set-Cookie"]).toMatch("HttpOnly;");
-
-			const jwtCookie = cookie.parse(resp.headers["Set-Cookie"])[conf.jwtCookieName];
-			const decodedJWT = await jwtManager.decode(jwtCookie);
-
-			expect(decodedJWT.id).toBe("id");
-			expect(decodedJWT.exp).toBeDefined();
-
-			done();
-		} catch (err) {
-			log.error(err);
-			done.fail();
-		}
+		await bus.request({
+			subject: constants.endpoints.http.LOGIN_WITH_COOKIE,
+			skipOptionsRequest: true,
+			message: { reqId: "reqId", data: { username, password } }
+		});
 	});
 
-	it("should use legacy get user call if custom endpoint is configured", async done => {
-		try {
-			const getUserSubject = "get-user-from-finland";
-			conf.userServiceGetUserSubject = getUserSubject
+	it("should use updated get user call if custom endpoint is not configured", async () => {
+		const username = "joelsoderstrom";
+		const password = "ZlatansPonyTail";
 
-			const username = "joelsoderstrom";
-			const password = "ZlatansPonyTail";
+		frusterTestUtils.mockService({
+			subject: conf.userServiceGetUserSubject,
+			response: ({ data }) => {
+				expect(data.query.id).toBeDefined("req.data.query.id");
 
-			testUtils.mockService({
-				expectRequest: (req) => {
-					expect(req.data.id).toBeDefined("req.data.id");
+				return { data: { users: [{}] } };
+			}
+		});
 
-					done();
-				},
-				data: { users: [{}] },
-				subject: getUserSubject
-			});
+		mocks.validatePassword();
 
-			testUtils.mockService({
-				subject: UserServiceClient.endpoints.VALIDATE_PASSWORD,
-				data: { id: "id" },
-				expectData: { username, password }
-			});
-
-			await bus.request({
-				subject: constants.endpoints.http.LOGIN_WITH_COOKIE,
-				skipOptionsRequest: true,
-				message: { reqId: "reqId", data: { username, password } }
-			});
-		} catch (err) {
-			log.error(err);
-			done.fail();
-		}
+		await bus.request({
+			subject: constants.endpoints.http.LOGIN_WITH_COOKIE,
+			skipOptionsRequest: true,
+			message: { reqId: "reqId", data: { username, password } }
+		});
 	});
 
-	it("should use updated get user call if custom endpoint is not configured", async done => {
-		try {
-			const username = "joelsoderstrom";
-			const password = "ZlatansPonyTail";
-
-			testUtils.mockService({
-				expectRequest: (req) => {
-					expect(req.data.query.id).toBeDefined("req.data.query.id");
-
-					done();
-				},
-				data: { users: [{}] },
-				subject: conf.userServiceGetUserSubject
-			});
-
-			testUtils.mockService({
-				subject: UserServiceClient.endpoints.VALIDATE_PASSWORD,
-				data: { id: "id" },
-				expectData: { username, password }
-			});
-
-			await bus.request({
-				subject: constants.endpoints.http.LOGIN_WITH_COOKIE,
-				skipOptionsRequest: true,
-				message: { reqId: "reqId", data: { username, password } }
-			});
-		} catch (err) {
-			log.error(err);
-			done.fail();
-		}
-	});
-
-	it("should login and return a non HttpOnly JWT as cookie", async done => {
+	it("should login and return a non HttpOnly JWT as cookie", async () => {
 		conf.jwtCookieHttpOnly = false;
 
 		const reqId = "a-req-id";
 		const username = "joelsoderstrom";
 		const password = "ZlatansPonyTail";
 
-		testUtils.mockService({
-			subject: UserServiceClient.endpoints.GET_USER,
-			data: {
-				users: [{
-					id: "id",
-					firstName: "firstName",
-					lastName: "lastName",
-					email: "email"
-				}],
-				totalCount: 1
+		mocks.getUsers([{ id: "id", firstName: "firstName", lastName: "lastName", email: "email" }])
+		mocks.validatePassword();
+
+		const { headers } = await bus.request({
+			subject: constants.endpoints.http.LOGIN_WITH_COOKIE,
+			skipOptionsRequest: true,
+			message: {
+				reqId: reqId,
+				data: { username, password }
 			}
 		});
 
-		testUtils.mockService({
-			subject: UserServiceClient.endpoints.VALIDATE_PASSWORD,
-			data: [{ id: "id" }],
-			expectData: { username, password }
-		});
-
-		try {
-			const resp = await bus.request({
-				subject: constants.endpoints.http.LOGIN_WITH_COOKIE,
-				skipOptionsRequest: true,
-				message: {
-					reqId: reqId,
-					data: { username, password }
-				}
-			});
-
-			expect(resp.headers["Set-Cookie"]).not.toMatch("HttpOnly;");
-			conf.jwtCookieHttpOnly = true;
-
-			done();
-		} catch (err) {
-			log.error(err);
-			done.fail();
-		}
+		expect(headers["Set-Cookie"]).not.toMatch("HttpOnly;");
+		conf.jwtCookieHttpOnly = true;
 	});
 
-	it("should login and return a user profile", async done => {
+	it("should login and return a user profile", async () => {
 		const reqId = "a-req-id";
 		const username = "joelsoderstrom";
 		const password = "ZlatansPonyTail";
@@ -219,44 +149,26 @@ describe("Cookie login", () => {
 			}
 		};
 
-		testUtils.mockService({
-			subject: UserServiceClient.endpoints.GET_USER,
-			data: {
-				users: [userData],
-				totalCount: 1
+		mocks.getUsers([userData])
+		mocks.validatePassword();
+
+		const { data } = await bus.request({
+			subject: constants.endpoints.http.LOGIN_WITH_COOKIE,
+			skipOptionsRequest: true,
+			message: {
+				reqId: reqId,
+				data: { username, password }
 			}
 		});
 
-		testUtils.mockService({
-			subject: UserServiceClient.endpoints.VALIDATE_PASSWORD,
-			data: [{ id: "id" }],
-			expectData: { username, password }
-		});
-
-		try {
-			const resp = await bus.request({
-				subject: constants.endpoints.http.LOGIN_WITH_COOKIE,
-				skipOptionsRequest: true,
-				message: {
-					reqId: reqId,
-					data: { username, password }
-				}
-			});
-
-			expect(resp.data.email).toBe(userData.email, "resp.data.email");
-			expect(resp.data.id).toBe(userData.id, "resp.data.id");
-			expect(resp.data.profile.firstName).toBe(userData.profile.firstName, "resp.data.profile.firstName");
-			expect(resp.data.profile.lastName).toBe(userData.profile.lastName, "resp.data.profile.lastName");
-			expect(resp.data.profile.thisShouldNotBeReturned).toBeUndefined("resp.data.profile.thisShouldNotBeReturned");
-
-			done();
-		} catch (err) {
-			log.error(err);
-			done.fail();
-		}
+		expect(data.email).toBe(userData.email, "data.email");
+		expect(data.id).toBe(userData.id, "data.id");
+		expect(data.profile.firstName).toBe(userData.profile.firstName, "data.profile.firstName");
+		expect(data.profile.lastName).toBe(userData.profile.lastName, "data.profile.lastName");
+		expect(data.profile.thisShouldNotBeReturned).toBeUndefined("data.profile.thisShouldNotBeReturned");
 	});
 
-	it("should save record of active session in database when logging in", async done => {
+	it("should save record of active session in database when logging in", async () => {
 		const reqId = "a-req-id";
 		const username = "joelsoderstrom";
 		const password = "ZlatansPonyTail";
@@ -268,33 +180,83 @@ describe("Cookie login", () => {
 			email: "email"
 		};
 
-		testUtils.mockService({
-			subject: UserServiceClient.endpoints.GET_USER,
-			data: {
-				users: [user],
-				totalCount: 1
+		mocks.getUsers([user]);
+		mocks.validatePassword();
+
+		const { headers } = await bus.request({
+			subject: constants.endpoints.http.LOGIN_WITH_COOKIE,
+			skipOptionsRequest: true,
+			message: {
+				reqId: reqId,
+				data: { username, password }
 			}
 		});
 
-		testUtils.mockService({
+		const session = await db.collection(constants.collection.SESSIONS).findOne({ userId: user.id });
+
+		expect(session).toBeDefined("session");
+
+		const jwtCookie = cookie.parse(headers["Set-Cookie"])[conf.jwtCookieName];
+		const decodedJWT = await jwtManager.decode(jwtCookie);
+
+		expect(session.id).toBe(crypto.createHmac("sha512", `${decodedJWT.exp} ${user.id}${decodedJWT.salt}`).digest("hex"));
+	});
+
+	it("should save session details in session on login", async done => {
+		const reqId = "a-req-id";
+		const username = "joelsoderstrom";
+		const password = "ZlatansPonyTail";
+		const userAgent = "wellbee%20Test/1184 CFNetwork/1125.2 Darwin/19.4.0";
+		const version = "13.4.1";
+
+		const user = {
+			id: "id",
+			firstName: "firstName",
+			lastName: "lastName",
+			email: "email"
+		};
+
+		const mockValidatePassword = frusterTestUtils.mockService({
 			subject: UserServiceClient.endpoints.VALIDATE_PASSWORD,
-			data: [{ id: "id" }],
-			expectData: { username, password }
+			response: {
+				data: { id: user.id }
+			}
+		});
+
+		const mockGetUsersByQuery = frusterTestUtils.mockService({
+			subject: UserServiceClient.endpoints.GET_USERS_BY_QUERY,
+			response: {
+				data: {
+					users: [user],
+					totalCount: 1
+				}
+			}
 		});
 
 		try {
 			const resp = await bus.request({
 				subject: constants.endpoints.http.LOGIN_WITH_COOKIE,
-				skipOptionsRequest: true,
 				message: {
 					reqId: reqId,
-					data: { username, password }
+					data: { username, password },
+					headers: {
+						"user-agent": userAgent,
+						version
+					}
 				}
 			});
+
+			expect(mockValidatePassword.requests[0].data.username).toBe(username, "mockValidatePassword.requests[0].data.username");
+			expect(mockValidatePassword.requests[0].data.password).toBe(password, "mockValidatePassword.requests[0].data.password");
+
+			expect(mockGetUsersByQuery.requests[0].data.query.id).toBe(user.id, "mockGetUsersByQuery.requests[0].data.query.id");
 
 			const session = await db.collection(constants.collection.SESSIONS).findOne({ userId: user.id });
 
 			expect(session).toBeDefined("session");
+			expect(session.sessionDetails.userAgent).toBe(userAgent, "session.sessionDetails.userAgent");
+			expect(session.sessionDetails.version).toBe(version, "session.sessionDetails.version");
+			expect(session.sessionDetails.created).toBeDefined("session.sessionDetails.created");
 
 			const jwtCookie = cookie.parse(resp.headers["Set-Cookie"])[conf.jwtCookieName];
 			const decodedJWT = await jwtManager.decode(jwtCookie);
@@ -311,9 +273,10 @@ describe("Cookie login", () => {
 	it("should return 401 if invalid username or password", async done => {
 		const reqId = "a-req-id";
 
-		bus.subscribe(UserServiceClient.endpoints.VALIDATE_PASSWORD, req => {
-			return { status: 401 };
-		});
+		frusterTestUtils.mockService({
+			subject: UserServiceClient.endpoints.VALIDATE_PASSWORD,
+			response: { status: 401 }
+		})
 
 		try {
 			await bus.request({
@@ -338,65 +301,38 @@ describe("Cookie login", () => {
 		}
 	});
 
-	it("should generate cookie JWT token for user", async done => {
-		bus.subscribe(UserServiceClient.endpoints.GET_USER, () => {
-			return {
-				status: 200,
-				data: {
-					users: [{
-						roles: ["admin"],
-						firstName: "firstName",
-						middleName: "middleName",
-						lastName: "lastName",
-						email: "email",
-						id: "id",
-					}],
-					totalCount: 1
-				},
-				error: {},
-				reqId: "reqId"
-			};
+	it("should generate cookie JWT token for user", async () => {
+		mocks.getUsers([{
+			roles: ["admin"],
+			firstName: "firstName",
+			middleName: "middleName",
+			lastName: "lastName",
+			email: "email",
+			id: "id",
+		}]);
+
+		const { status, reqId, headers } = await bus.request({
+			subject: constants.endpoints.service.GENERATE_TOKEN_FOR_USER_COOKIE,
+			skipOptionsRequest: true,
+			message: {
+				reqId: "reqId",
+				data: { firstName: "viktor" }
+			}
 		});
 
-		try {
-			const resp = await bus.request({
-				subject: constants.endpoints.service.GENERATE_TOKEN_FOR_USER_COOKIE,
-				skipOptionsRequest: true,
-				message: {
-					reqId: "reqId",
-					data: { firstName: "viktor" }
-				}
-			});
+		expect(status).toBe(200);
+		expect(reqId).toBe("reqId");
+		expect(headers["Set-Cookie"]).toBeDefined();
 
-			expect(resp.status).toBe(200);
-			expect(resp.reqId).toBe("reqId");
-			expect(resp.headers["Set-Cookie"]).toBeDefined();
+		const jwtCookie = cookie.parse(headers["Set-Cookie"])[conf.jwtCookieName];
+		const decodedJWT = await jwtManager.decode(jwtCookie);
 
-			const jwtCookie = cookie.parse(resp.headers["Set-Cookie"])[conf.jwtCookieName];
-			const decodedJWT = await jwtManager.decode(jwtCookie);
-
-			expect(decodedJWT.id).toBe("id");
-			expect(decodedJWT.exp).toBeDefined();
-
-			done();
-		} catch (err) {
-			log.error(err);
-			done.fail();
-		}
+		expect(decodedJWT.id).toBe("id");
+		expect(decodedJWT.exp).toBeDefined();
 	});
 
 	it("should fail to generate cookie JWT token if user not found", async done => {
-		bus.subscribe(UserServiceClient.endpoints.GET_USER, () => {
-			return {
-				status: 200,
-				data: {
-					users: [],
-					totalCount: 0
-				},
-				error: {},
-				reqId: "reqId"
-			};
-		});
+		mocks.getUsers([]);
 
 		try {
 			await bus.request({
@@ -409,29 +345,16 @@ describe("Cookie login", () => {
 			});
 
 			done.fail();
-		} catch (err) {
-			expect(err.status).toBe(404);
-			expect(err.error.code).toBe(errors.code.userNotFound);
+		} catch ({ status, error }) {
+			expect(status).toBe(404);
+			expect(error.code).toBe(errors.code.userNotFound);
 
 			done();
 		}
 	});
 
 	it("should fail to generate cookie JWT token if multiple users found", async done => {
-		bus.subscribe(UserServiceClient.endpoints.GET_USER, () => {
-			return {
-				status: 200,
-				data: {
-					users: [
-						{ firstName: "fakeUser1" },
-						{ firstName: "fakeUser2" }
-					],
-					totalCount: 2
-				},
-				error: {},
-				reqId: "reqId"
-			};
-		});
+		mocks.getUsers([{ firstName: "fakeUser1" }, { firstName: "fakeUser2" }]);
 
 		try {
 			await bus.request({
@@ -444,13 +367,47 @@ describe("Cookie login", () => {
 			});
 
 			done.fail();
-		} catch (err) {
-			expect(err.status).toBe(500);
-			expect(err.error.code).toBe(errors.code.unexpectedError);
+		} catch ({ status, error }) {
+			expect(status).toBe(500);
+			expect(error.code).toBe(errors.code.unexpectedError);
 
 			done();
 		}
 
+	});
+
+	it("should login and return JWT as cookie for additional query", async () => {
+		const reqId = "a-req-id";
+		const username = "joelsoderstrom";
+		const password = "ZlatansPonyTail";
+
+		mocks.getUsers([{ id: "id", firstName: "firstName", lastName: "lastName", email: "email" }])
+		mocks.validatePassword();
+
+		const { status, reqId: resReqId, headers } = await bus.request({
+			subject: constants.endpoints.http.LOGIN_WITH_COOKIE,
+			skipOptionsRequest: true,
+			message: {
+				reqId: reqId,
+				data: {
+					username,
+					password,
+					"organisation.id": "org-id"
+				}
+			}
+		});
+
+		expect(status).toBe(200);
+		expect(resReqId).toBe(reqId);
+		expect(headers["Set-Cookie"]).toBeDefined();
+		expect(headers["Set-Cookie"]).not.toMatch("domain");
+		expect(headers["Set-Cookie"]).toMatch("HttpOnly;");
+
+		const jwtCookie = cookie.parse(headers["Set-Cookie"])[conf.jwtCookieName];
+		const decodedJWT = await jwtManager.decode(jwtCookie);
+
+		expect(decodedJWT.id).toBe("id");
+		expect(decodedJWT.exp).toBeDefined();
 	});
 
 });

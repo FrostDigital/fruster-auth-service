@@ -1,13 +1,15 @@
-const bus = require("fruster-bus");
-const log = require("fruster-log");
-const authService = require("../auth-service");
+const Db = require("mongodb").Db;
+const bus = require("fruster-bus").testBus;
+const frusterTestUtils = require("fruster-test-utils");
+const conf = require("../conf");
 const constants = require("../lib/constants");
-const testUtils = require("fruster-test-utils");
 const UserServiceClient = require("../lib/clients/UserServiceClient");
 const SessionRepo = require("../lib/repos/SessionRepo");
 const JWTManager = require("../lib/managers/JWTManager");
-const Db = require("mongodb").Db;
-
+const specConstants = require("./support/spec-constants");
+const mocks = require("./support/mocks");
+const SpecUtils = require("./support/SpecUtils");
+const log = require("fruster-log");
 
 describe("Token login service", () => {
 
@@ -19,46 +21,68 @@ describe("Token login service", () => {
 	/** @type {JWTManager} */
 	let jwtManager;
 
-	testUtils.startBeforeEach({
-		mongoUrl: "mongodb://localhost:27017/tokin-login-test",
-		service: authService,
-		bus: bus,
-		mockNats: true,
-		afterStart: (connection) => {
-			db = connection.db;
-			refreshTokenColl = db.collection(constants.collection.REFRESH_TOKENS);
+	frusterTestUtils
+		.startBeforeEach(specConstants
+			.testUtilsOptions(async (connection) => {
+				db = connection.db;
+				refreshTokenColl = db.collection(constants.collection.REFRESH_TOKENS);
 
-			sessionRepo = new SessionRepo(db);
-			jwtManager = new JWTManager(sessionRepo);
+				sessionRepo = new SessionRepo(db);
+				jwtManager = new JWTManager(sessionRepo);
+			}));
 
-			return Promise.resolve();
-		}
+	afterEach(() => SpecUtils.resetConfig());
+
+	it("should login and return access and refresh token in body", async () => {
+		const now = Date.now();
+		const reqId = "a-req-id";
+
+		mocks.getUsers([{ id: "id", firstName: "firstName", lastName: "lastName", email: "email" }])
+		mocks.validatePassword();
+
+		const { status, reqId: resReqId, data } = await bus.request({
+			subject: constants.endpoints.http.LOGIN_WITH_TOKEN,
+			skipOptionsRequest: true,
+			message: {
+				reqId: reqId,
+				data: {
+					username: "joelsoderstrom",
+					password: "ZlatansPonyTail"
+				}
+			}
+		});
+
+		expect(status).toBe(200);
+		expect(resReqId).toBe(reqId);
+		expect(data.accessToken).toBeDefined();
+		expect(data.refreshToken).toBeDefined();
+		expect(data.profile.id).toBe("id");
+		expect(data.profile.firstName).toBe("firstName");
+
+		const decodedJWT = await jwtManager.decode(data.accessToken);
+
+		expect(decodedJWT.id).toBe("id");
+		expect(decodedJWT.exp).toBeDefined("exp");
+
+		const token = await refreshTokenColl.findOne({
+			token: data.refreshToken
+		});
+		expect(token).toBeTruthy("should gotten refreshToken " + data.refreshToken)
+		expect(token.userId).toBe("id");
+		expect(token.expires.getTime()).not.toBeLessThan(now);
+		expect(token.expired).toBe(false);
 	});
 
-	it("should login and return access and refreshtoken in body", async done => {
+	it("should save session details in session on login", async done => {
+		const reqId = "a-req-id";
+		const userAgent = "wellbee%20Test/1184 CFNetwork/1125.2 Darwin/19.4.0";
+		const version = "13.4.1";
+
+		mocks.getUsers([{ id: "id", firstName: "firstName", lastName: "lastName", email: "email" }])
+		mocks.validatePassword();
+
 		try {
-			const now = Date.now();
-			const reqId = "a-req-id";
-
-			testUtils.mockService({
-				subject: UserServiceClient.endpoints.GET_USER,
-				data: {
-					users: [{
-						id: "id",
-						firstName: "firstName",
-						lastName: "lastName",
-						email: "email"
-					}],
-					totalCount: 1
-				}
-			});
-
-			testUtils.mockService({
-				subject: UserServiceClient.endpoints.VALIDATE_PASSWORD,
-				data: { id: "id" }
-			});
-
-			const resp = await bus.request({
+			const { status, reqId: resReqId, data } = await bus.request({
 				subject: constants.endpoints.http.LOGIN_WITH_TOKEN,
 				skipOptionsRequest: true,
 				message: {
@@ -66,100 +90,106 @@ describe("Token login service", () => {
 					data: {
 						username: "joelsoderstrom",
 						password: "ZlatansPonyTail"
+					},
+					headers: {
+						"user-agent": userAgent,
+						version
 					}
 				}
 			});
 
-			expect(resp.status).toBe(200);
-			expect(resp.reqId).toBe(reqId);
-			expect(resp.data.accessToken).toBeDefined();
-			expect(resp.data.refreshToken).toBeDefined();
-			expect(resp.data.profile.id).toBe("id");
-			expect(resp.data.profile.firstName).toBe("firstName");
+			const session = await db.collection(constants.collection.SESSIONS).findOne({ userId: "id" });
 
-			const decodedJWT = await jwtManager.decode(resp.data.accessToken);
-
-			expect(decodedJWT.id).toBe("id");
-			expect(decodedJWT.exp).toBeDefined("exp");
-
-			const token = await refreshTokenColl.findOne({
-				token: resp.data.refreshToken
-			});
-			expect(token).toBeTruthy("should gotten refreshToken " + resp.data.refreshToken)
-			expect(token.userId).toBe("id");
-			expect(token.expires.getTime()).not.toBeLessThan(now);
-			expect(token.expired).toBe(false);
+			expect(session).toBeDefined("session");
+			expect(session.sessionDetails.userAgent).toBe(userAgent, "session.sessionDetails.userAgent");
+			expect(session.sessionDetails.version).toBe(version, "session.sessionDetails.version");
+			expect(session.sessionDetails.created).toBeDefined("session.sessionDetails.created");
 
 			done();
 		} catch (err) {
 			log.error(err);
-			done.fail(err);
+			done.fail();
 		}
 	});
+
 
 	it("should return 401 if invalid username or password", async done => {
-		try {
-			const reqId = "a-req-id";
+		const reqId = "a-req-id";
 
-			bus.subscribe({
-				subject: UserServiceClient.endpoints.VALIDATE_PASSWORD,
-				handle: req => {
-					return {
-						status: 401,
-						reqId: req.reqId
-					};
-				}
-			});
-
-			try {
-				await bus.request(constants.endpoints.http.LOGIN_WITH_TOKEN, {
-					reqId: reqId,
-					data: { username: "joelsoderstrom", password: "ZlatansPonyTail" }
-				});
-
-				done.fail();
-			} catch (err) {
-				expect(err.status).toBe(401);
-				expect(err.reqId).toBe(reqId);
-
-				done();
-			}
-		} catch (err) {
-			log.error(err);
-			done.fail(err);
-		}
-	});
-
-	it("should return 400 if username was not provided", async done => {
-		try {
-			const reqId = "a-req-id";
-
-			bus.subscribe(UserServiceClient.endpoints.VALIDATE_PASSWORD, req => {
+		bus.subscribe({
+			subject: UserServiceClient.endpoints.VALIDATE_PASSWORD,
+			handle: req => {
 				return {
 					status: 401,
 					reqId: req.reqId
 				};
+			}
+		});
+
+		try {
+			await bus.request(constants.endpoints.http.LOGIN_WITH_TOKEN, {
+				reqId: reqId,
+				data: { username: "joelsoderstrom", password: "ZlatansPonyTail" }
 			});
 
-			try {
-				await bus.request({
-					subject: constants.endpoints.http.LOGIN_WITH_TOKEN,
-					skipOptionsRequest: true,
-					message: {
-						reqId: reqId,
-						data: { password: "ZlatansPonyTail" }
-					}
-				});
-			} catch (err) {
-				expect(err.status).toBe(400);
-				expect(err.reqId).toBe(reqId);
-
-				done();
-			}
+			done.fail();
 		} catch (err) {
-			log.error(err);
-			done.fail(err);
+			expect(err.status).toBe(401);
+			expect(err.reqId).toBe(reqId);
+
+			done();
 		}
+	});
+
+	it("should return 400 if username was not provided", async done => {
+		const reqId = "a-req-id";
+
+		bus.subscribe(UserServiceClient.endpoints.VALIDATE_PASSWORD, req => {
+			return {
+				status: 401,
+				reqId: req.reqId
+			};
+		});
+
+		try {
+			await bus.request({
+				subject: constants.endpoints.http.LOGIN_WITH_TOKEN,
+				skipOptionsRequest: true,
+				message: {
+					reqId: reqId,
+					data: { password: "ZlatansPonyTail" }
+				}
+			});
+		} catch (err) {
+			expect(err.status).toBe(400);
+			expect(err.reqId).toBe(reqId);
+
+			done();
+		}
+	});
+
+	it("possible to user data response key", async () => {
+		const reqId = "a-req-id";
+
+		conf.userDataResponseKey = "user";
+
+		mocks.getUsers([{ id: "id", firstName: "firstName", lastName: "lastName", email: "email" }])
+		mocks.validatePassword();
+
+		const { status, data } = await bus.request({
+			subject: constants.endpoints.http.LOGIN_WITH_TOKEN,
+			skipOptionsRequest: true,
+			message: {
+				reqId,
+				data: {
+					username: "joelsoderstrom",
+					password: "ZlatansPonyTail"
+				}
+			}
+		});
+
+		expect(status).toBe(200);
+		expect(data[conf.userDataResponseKey]).toBeDefined("config user data response");
 	});
 
 });
