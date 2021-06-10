@@ -26,6 +26,9 @@ module.exports = {
 
 	// Domain that JWT Cookie is valid for
 	jwtCookieDomain: process.env.JWT_COOKIE_DOMAIN || null,
+	
+	// SameSite parameter for cookie. If not set usually defaults to LAX or NONE, depending on the browser
+	jwtCookieSameSite: process.env.JWT_COOKIE_SAME_SITE || "None",
 
 	// If JWT cookie should be HTTP only. This should only be disabled during test
 	jwtCookieHttpOnly: (process.env.JWT_COOKIE_HTTP_ONLY || "true") == "true",
