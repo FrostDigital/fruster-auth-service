@@ -27,7 +27,7 @@ module.exports = {
 	// Domain that JWT Cookie is valid for
 	jwtCookieDomain: process.env.JWT_COOKIE_DOMAIN || null,
 	
-	// SameSite parameter for cookie. If not set usually defaults to Lax in newer versions of browsers (before it was None). 
+	// SameSite parameter for cookie. Possible values: Lax, Strict, None. If not set usually defaults to Lax in newer versions of browsers (before it was None). 
 	// None is needed if cross-site cookies are required
 	jwtCookieSameSite: process.env.JWT_COOKIE_SAME_SITE || null,
 
