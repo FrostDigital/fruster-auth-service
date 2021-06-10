@@ -48,8 +48,6 @@ describe("ConvertTokenToCookieHandler", () => {
 			}
 		});
 
-		console.log(`convertTokenToCookieResponse`, convertTokenToCookieResponse)
-
 		expect(convertTokenToCookieResponse.status).toBe(200);
 		expect(convertTokenToCookieResponse.headers["Set-Cookie"]).toContain(tokenResponse.data.accessToken);
 		expect(convertTokenToCookieResponse.headers["Content-Type"]).toBeUndefined();
