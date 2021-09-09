@@ -30,6 +30,9 @@ module.exports = {
 	// If JWT cookie should be HTTP only. This should only be disabled during test
 	jwtCookieHttpOnly: (process.env.JWT_COOKIE_HTTP_ONLY || "true") == "true",
 
+	// Browser cookies are support to keep max 4096 bytes. So additional payload size should not exceed this value.
+	jwtAdditionalPayloadSize: Number.parseFloat(process.env.JWT_ADDITIONAL_PAYLOAD_SIZE || 3000),
+
 	// How long access token is valid
 	/** @type {String} */
 	accessTokenTTL: process.env.ACCESS_TOKEN_TTL || "1d",

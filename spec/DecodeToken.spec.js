@@ -29,7 +29,7 @@ describe("Decode and validate token", () => {
 
 	it("should decode jwt token", async () => {
 		const reqId = "a-req-id";
-		const encodedToken = await jwtManager.encode({ id: "userId" }, 5000);
+		const encodedToken = await jwtManager.encode({ user: { id: "userId" }, expiresInMs: 5000 });
 
 		mocks.getUsers([{ id: "userId", foo: "bar" }]);
 
@@ -48,7 +48,10 @@ describe("Decode and validate token", () => {
 
 	it("should decode old jwt tokens", async () => {
 		const reqId = "a-req-id";
-		const encodedToken = await jwtManager.encode({ id: "userId" }, (-conf.accessTokenTTL) + 10);
+		const encodedToken = await jwtManager.encode({
+			user: { id: "userId" },
+			expiresInMs: (-conf.accessTokenTTL) + 10
+		});
 
 		await db.collection(constants.collection.SESSIONS).remove({ userId: "userId" });
 
@@ -69,7 +72,7 @@ describe("Decode and validate token", () => {
 
 	it("should fail to decode jwt token if user does not exist anymore", async done => {
 		const reqId = "a-req-id";
-		const encodedToken = await jwtManager.encode({ id: "userId" }, 5000);
+		const encodedToken = await jwtManager.encode({ user: { id: "userId" }, expiresInMs: 5000 });
 
 		mocks.getUsers([]);
 
@@ -146,7 +149,7 @@ describe("Decode and validate token", () => {
 		const user = {
 			id: "userId", scopes: ["system.logout"], roles: ["user"]
 		};
-		const encodedToken = await jwtManager.encode({ id: user.id }, 5000);
+		const encodedToken = await jwtManager.encode({ user: { id: user.id }, expiresInMs: 5000 });
 
 		mocks.getUsers([]);
 
