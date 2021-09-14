@@ -65,7 +65,7 @@ describe("Refresh", () => {
 
 	it("should get new access token from refresh token", async () => {
 
-		const encodedToken = await jwtManager.encode({ id: "userId" }, 100000);
+		const encodedToken = await jwtManager.encode({ user: { id: "userId" }, expiresInMs: 100000 });
 
 		const reqId = "a-req-id";
 
