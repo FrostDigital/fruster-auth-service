@@ -51,6 +51,8 @@ module.exports.start = async (busAddress, mongoUrl) => {
 	const DecodeTokenRequest = require("./schemas/DecodeTokenRequest");
 	const GenerateJWTTokenForUserRequest = require("./schemas/GenerateJWTTokenForUserRequest");
 	const RefreshTokenRequest = require("./schemas/RefreshTokenRequest");
+	const RefreshTokenRequestViaService = require("./schemas/RefreshTokenRequestViaService");
+	const RefreshTokenResponse = require("./schemas/RefreshTokenResponse");
 	const TokenAuthResponse = require("./schemas/TokenAuthResponse");
 	const GetSessionDetailsByUserIdRequest = require("./schemas/GetSessionDetailsByUserIdRequest");
 	const SessionDetailsResponse = require("./schemas/SessionDetailsResponse");
@@ -168,6 +170,14 @@ module.exports.start = async (busAddress, mongoUrl) => {
 		subject: "auth-service.generate-jwt-token-for-user.app",
 		deprecated: `Use ${constants.endpoints.service.GENERATE_TOKEN_FOR_USER_TOKEN} instead`,
 		handle: req => generateJWTTokenHandler.handle(req, isToken)
+	});
+
+	bus.subscribe({
+		subject: constants.endpoints.service.REFRESH_AUTH,
+		docs: docs.service.REFRESH_AUTH,
+		requestSchema: RefreshTokenRequestViaService,
+		responseSchema: RefreshTokenResponse,
+		handle: req => refreshTokenHandler.handle(req)
 	});
 
 	log.info("Auth service is up and running");
