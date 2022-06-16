@@ -58,7 +58,7 @@ module.exports = {
 	 * The scope required to do impersonation. Is not set by default which means
 	 * that impersonation is disabled.
 	 */
-	impersonateScope: process.env.IMPERSONATE_SCOPE,
+	impersonationScope: process.env.IMPERSONATION_SCOPE,
 
 };
 
