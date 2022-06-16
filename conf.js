@@ -52,7 +52,13 @@ module.exports = {
 	userServiceGetUserSubject: process.env.USER_SERVICE_GET_USER_SUBJECT || "user-service.get-users-by-query",
 
 	/** `user-service.get-users-by-query` response has `profile` attribute. This key for avoid duplicate profile keys */
-	userDataResponseKey: process.env.USER_DATA_RESPONSE_KEY || "profile"
+	userDataResponseKey: process.env.USER_DATA_RESPONSE_KEY || "profile",
+
+	/**
+	 * The scope required to do impersonation. Is not set by default which means
+	 * that impersonation is disabled.
+	 */
+	impersonationScope: process.env.IMPERSONATION_SCOPE,
 
 };
 
