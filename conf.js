@@ -57,13 +57,13 @@ module.exports = {
 	/**
 	 * If to prolong the session ttl when user is active.
 	 */
-	prolongSessionOnActivity: process.env.PROLONG_SESSION_ON_ACTIVITY === "true",
+	prolongCookieSessionOnActivity: process.env.PROLONG_COOKIE_SESSION_ON_ACTIVITY === "true",
 
 	/**
 	 * How long a session is valid for a session created after a cookie login.
 	 * Will use same value as JWT_COOKIE_AGE if not set.
 	 *
-	 * Use-case makes most (only?) sense in conjunction with PROLONG_SESSION_ON_ACTIVITY.
+	 * Use-case makes most (only?) sense in conjunction with PROLONG_COOKIE_SESSION_ON_ACTIVITY.
 	 *
 	 * Accepts ms() format such as "1d", "10m"
 	 */
