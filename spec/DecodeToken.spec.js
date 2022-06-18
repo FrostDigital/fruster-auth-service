@@ -180,4 +180,102 @@ describe("Decode and validate token", () => {
 		}
 	});
 
+	it("should prolong cookie session if configured to do so", async () => {
+		conf.prolongCookieSessionOnActivity = true;
+
+		const reqId = "a-req-id";
+		const encodedToken = await jwtManager.encode({ user: { id: "userId" }, expiresInMs: 5000 });
+
+		const { sessions: [sessionBefore] } = await sessionRepo.find({query: {userId: "userId"}})
+
+		await sleep();
+
+		mocks.getUsers([{ id: "userId", foo: "bar" }]);
+
+		await bus.request({
+			subject: constants.endpoints.service.DECODE_TOKEN,
+			skipOptionsRequest: true,
+			message: {
+				reqId: reqId,
+				data: encodedToken,
+				headers: {
+					cookie: "jwt=" + encodedToken
+				}
+			}
+		});
+
+		await sleep();
+
+		const { sessions: [sessionAfter] } = await sessionRepo.find({query: {userId: "userId"}})
+
+		expect(new Date(sessionAfter.expires).getTime()).toBeGreaterThan(new Date(sessionBefore.expires).getTime());
+
+		conf.prolongCookieSessionOnActivity = false;
+	});
+
+	it("should NOT prolong session for non cookie sessions", async () => {
+		conf.prolongCookieSessionOnActivity = true;
+
+		const reqId = "a-req-id";
+		const encodedToken = await jwtManager.encode({ user: { id: "userId" }, expiresInMs: 5000 });
+
+		const { sessions: [sessionBefore] } = await sessionRepo.find({query: {userId: "userId"}})
+
+		await sleep();
+
+		mocks.getUsers([{ id: "userId", foo: "bar" }]);
+
+		await bus.request({
+			subject: constants.endpoints.service.DECODE_TOKEN,
+			skipOptionsRequest: true,
+			message: {
+				reqId: reqId,
+				data: encodedToken,
+			}
+		});
+
+		await sleep();
+
+		const { sessions: [sessionAfter] } = await sessionRepo.find({query: {userId: "userId"}})
+
+		expect(sessionAfter.expires).toEqual(sessionBefore.expires);
+
+		conf.prolongCookieSessionOnActivity = false;
+	});
+
+	it("should NOT prolong session if not configured to do so", async () => {
+		const reqId = "a-req-id";
+		const encodedToken = await jwtManager.encode({ user: { id: "userId" }, expiresInMs: 5000 });
+
+		const { sessions: [sessionBefore] } = await sessionRepo.find({query: {userId: "userId"}})
+
+		await sleep();
+
+		mocks.getUsers([{ id: "userId", foo: "bar" }]);
+
+		await bus.request({
+			subject: constants.endpoints.service.DECODE_TOKEN,
+			skipOptionsRequest: true,
+			message: {
+				reqId: reqId,
+				data: encodedToken,
+				headers: {
+					cookie: "jwt=" + encodedToken
+				}
+			}
+		});
+
+		await sleep();
+
+		const { sessions: [sessionAfter] } = await sessionRepo.find({query: {userId: "userId"}})
+
+		expect(sessionAfter.expires).toEqual(sessionBefore.expires);
+
+	});
 });
+
+
+
+function sleep() {
+	return new Promise((resolve) => setTimeout(resolve, 500));
+}
