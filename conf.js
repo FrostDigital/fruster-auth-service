@@ -49,7 +49,9 @@ module.exports = {
 	userServiceGetUserSubject: process.env.USER_SERVICE_GET_USER_SUBJECT || "user-service.get-users-by-query",
 
 	/** `user-service.get-users-by-query` response has `profile` attribute. This key for avoid duplicate profile keys */
-	userDataResponseKey: process.env.USER_DATA_RESPONSE_KEY || "profile"
+	userDataResponseKey: process.env.USER_DATA_RESPONSE_KEY || "profile",
+
+	deactivatedUserCanLogin: (process.env.DEACTIVATED_USER_CAN_LOGIN === "false") ? false : true
 
 };
 

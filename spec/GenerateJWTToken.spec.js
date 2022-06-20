@@ -8,6 +8,7 @@ const SessionRepo = require("../lib/repos/SessionRepo");
 const JWTManager = require("../lib/managers/JWTManager");
 const specConstants = require("./support/spec-constants");
 const mocks = require("./support/mocks");
+const conf = require("../conf");
 
 
 describe("Generate JWT token", () => {
@@ -100,5 +101,36 @@ describe("Generate JWT token", () => {
 		expect(decodedJWT.id).toBe("id");
 		expect(decodedJWT.exp).toBeDefined();
 	});
+
+	it("should throw error if user is deactivated", async () => {
+		conf.deactivatedUserCanLogin = false;
+
+		mocks.getUsers([{
+			roles: ["admin"],
+			firstName: "firstName",
+			middleName: "middleName",
+			lastName: "lastName",
+			email: "email",
+			id: "id",
+			deactivated: new Date()
+		}]);
+
+		try {
+			await bus.request({
+				subject: constants.endpoints.service.GENERATE_TOKEN_FOR_USER_COOKIE,
+				skipOptionsRequest: true,
+				message: {
+					reqId: "reqId",
+					data: { id: "id" }
+				}
+			});
+		} catch (err) {
+			expect(err.status).toBe(403);
+			expect(err.error.code).toBe("auth-service.403.2");
+			return;
+		}
+		fail("Expected error to be thrown");
+
+	})
 
 });

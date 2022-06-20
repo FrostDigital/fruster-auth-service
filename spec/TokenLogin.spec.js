@@ -192,4 +192,29 @@ describe("Token login service", () => {
 		expect(data[conf.userDataResponseKey]).toBeDefined("config user data response");
 	});
 
+	it("deactivated user cannot login", async () => {
+		conf.deactivatedUserCanLogin = false;
+		mocks.getUsers([{ id: "id", firstName: "firstName", lastName: "lastName", email: "email", deactivated: new Date() }])
+		mocks.validatePassword();
+
+		try {
+			await bus.request({
+				subject: constants.endpoints.http.LOGIN_WITH_COOKIE,
+				skipOptionsRequest: true,
+				message: {
+					reqId:"reqId",
+					data: {
+						username: "username",
+						password: "password"
+					}
+				}
+			});
+		} catch (err) {
+			expect(err.status).toBe(403);
+			expect(err.error.code).toBe("auth-service.403.2");
+			return;
+		}
+		fail("Expected error to be thrown");
+	});
+
 });
