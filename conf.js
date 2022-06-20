@@ -30,6 +30,9 @@ module.exports = {
 	// If JWT cookie should be HTTP only. This should only be disabled during test
 	jwtCookieHttpOnly: (process.env.JWT_COOKIE_HTTP_ONLY || "true") == "true",
 
+	// Browser cookies are support to keep max 4096 bytes. So additional payload size should not exceed this value.
+	jwtAdditionalPayloadSize: Number.parseFloat(process.env.JWT_ADDITIONAL_PAYLOAD_SIZE || 3000),
+
 	// How long access token is valid
 	/** @type {String} */
 	accessTokenTTL: process.env.ACCESS_TOKEN_TTL || "1d",
@@ -51,7 +54,23 @@ module.exports = {
 	/** `user-service.get-users-by-query` response has `profile` attribute. This key for avoid duplicate profile keys */
 	userDataResponseKey: process.env.USER_DATA_RESPONSE_KEY || "profile",
 
-	deactivatedUserCanLogin: (process.env.DEACTIVATED_USER_CAN_LOGIN === "false") ? false : true
+	/** If deactivated users (with a value in deactivated field) should be able to login. Defaults to true */
+	deactivatedUsersCanLogin: (process.env.DEACTIVATED_USERS_CAN_LOGIN === "false") ? false : true,
+
+	/**
+	 * If to prolong the session ttl when user is active.
+	 */
+	prolongCookieSessionOnActivity: process.env.PROLONG_COOKIE_SESSION_ON_ACTIVITY === "true",
+
+	/**
+	 * How long a session is valid for a session created after a cookie login.
+	 * Will use same value as JWT_COOKIE_AGE if not set.
+	 *
+	 * Use-case makes most (only?) sense in conjunction with PROLONG_COOKIE_SESSION_ON_ACTIVITY.
+	 *
+	 * Accepts ms() format such as "1d", "10m"
+	 */
+	cookieSessionTTL: process.env.COOKIE_SESSION_TTL
 
 };
 

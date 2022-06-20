@@ -193,7 +193,7 @@ describe("Token login service", () => {
 	});
 
 	it("deactivated user cannot login", async () => {
-		conf.deactivatedUserCanLogin = false;
+		conf.deactivatedUsersCanLogin = false;
 		mocks.getUsers([{ id: "id", firstName: "firstName", lastName: "lastName", email: "email", deactivated: new Date() }])
 		mocks.validatePassword();
 

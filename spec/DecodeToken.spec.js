@@ -29,7 +29,7 @@ describe("Decode and validate token", () => {
 
 	it("should decode jwt token", async () => {
 		const reqId = "a-req-id";
-		const encodedToken = await jwtManager.encode({ id: "userId" }, 5000);
+		const encodedToken = await jwtManager.encode({ user: { id: "userId" }, expiresInMs: 5000 });
 
 		mocks.getUsers([{ id: "userId", foo: "bar" }]);
 
@@ -48,7 +48,10 @@ describe("Decode and validate token", () => {
 
 	it("should decode old jwt tokens", async () => {
 		const reqId = "a-req-id";
-		const encodedToken = await jwtManager.encode({ id: "userId" }, (-conf.accessTokenTTL) + 10);
+		const encodedToken = await jwtManager.encode({
+			user: { id: "userId" },
+			expiresInMs: (-conf.accessTokenTTL) + 10
+		});
 
 		await db.collection(constants.collection.SESSIONS).remove({ userId: "userId" });
 
@@ -69,7 +72,7 @@ describe("Decode and validate token", () => {
 
 	it("should fail to decode jwt token if user does not exist anymore", async done => {
 		const reqId = "a-req-id";
-		const encodedToken = await jwtManager.encode({ id: "userId" }, 5000);
+		const encodedToken = await jwtManager.encode({ user: { id: "userId" }, expiresInMs: 5000 });
 
 		mocks.getUsers([]);
 
@@ -146,7 +149,7 @@ describe("Decode and validate token", () => {
 		const user = {
 			id: "userId", scopes: ["system.logout"], roles: ["user"]
 		};
-		const encodedToken = await jwtManager.encode({ id: user.id }, 5000);
+		const encodedToken = await jwtManager.encode({ user: { id: user.id }, expiresInMs: 5000 });
 
 		mocks.getUsers([]);
 
@@ -177,4 +180,102 @@ describe("Decode and validate token", () => {
 		}
 	});
 
+	it("should prolong cookie session if configured to do so", async () => {
+		conf.prolongCookieSessionOnActivity = true;
+
+		const reqId = "a-req-id";
+		const encodedToken = await jwtManager.encode({ user: { id: "userId" }, expiresInMs: 5000 });
+
+		const { sessions: [sessionBefore] } = await sessionRepo.find({query: {userId: "userId"}})
+
+		await sleep();
+
+		mocks.getUsers([{ id: "userId", foo: "bar" }]);
+
+		await bus.request({
+			subject: constants.endpoints.service.DECODE_TOKEN,
+			skipOptionsRequest: true,
+			message: {
+				reqId: reqId,
+				data: encodedToken,
+				headers: {
+					cookie: "jwt=" + encodedToken
+				}
+			}
+		});
+
+		await sleep();
+
+		const { sessions: [sessionAfter] } = await sessionRepo.find({query: {userId: "userId"}})
+
+		expect(new Date(sessionAfter.expires).getTime()).toBeGreaterThan(new Date(sessionBefore.expires).getTime());
+
+		conf.prolongCookieSessionOnActivity = false;
+	});
+
+	it("should NOT prolong session for non cookie sessions", async () => {
+		conf.prolongCookieSessionOnActivity = true;
+
+		const reqId = "a-req-id";
+		const encodedToken = await jwtManager.encode({ user: { id: "userId" }, expiresInMs: 5000 });
+
+		const { sessions: [sessionBefore] } = await sessionRepo.find({query: {userId: "userId"}})
+
+		await sleep();
+
+		mocks.getUsers([{ id: "userId", foo: "bar" }]);
+
+		await bus.request({
+			subject: constants.endpoints.service.DECODE_TOKEN,
+			skipOptionsRequest: true,
+			message: {
+				reqId: reqId,
+				data: encodedToken,
+			}
+		});
+
+		await sleep();
+
+		const { sessions: [sessionAfter] } = await sessionRepo.find({query: {userId: "userId"}})
+
+		expect(sessionAfter.expires).toEqual(sessionBefore.expires);
+
+		conf.prolongCookieSessionOnActivity = false;
+	});
+
+	it("should NOT prolong session if not configured to do so", async () => {
+		const reqId = "a-req-id";
+		const encodedToken = await jwtManager.encode({ user: { id: "userId" }, expiresInMs: 5000 });
+
+		const { sessions: [sessionBefore] } = await sessionRepo.find({query: {userId: "userId"}})
+
+		await sleep();
+
+		mocks.getUsers([{ id: "userId", foo: "bar" }]);
+
+		await bus.request({
+			subject: constants.endpoints.service.DECODE_TOKEN,
+			skipOptionsRequest: true,
+			message: {
+				reqId: reqId,
+				data: encodedToken,
+				headers: {
+					cookie: "jwt=" + encodedToken
+				}
+			}
+		});
+
+		await sleep();
+
+		const { sessions: [sessionAfter] } = await sessionRepo.find({query: {userId: "userId"}})
+
+		expect(sessionAfter.expires).toEqual(sessionBefore.expires);
+
+	});
 });
+
+
+
+function sleep() {
+	return new Promise((resolve) => setTimeout(resolve, 500));
+}

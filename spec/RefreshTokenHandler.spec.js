@@ -12,7 +12,7 @@ const SessionFixtures = require("./support/session-fixtures");
 const JWTManager = require("../lib/managers/JWTManager");
 const SessionRepo = require("../lib/repos/SessionRepo");
 
-describe("Refresh", () => {
+describe("RefreshTokenHandler", () => {
 
 	/** @type {Db} */
 	let db;
@@ -65,7 +65,7 @@ describe("Refresh", () => {
 
 	it("should get new access token from refresh token", async () => {
 
-		const encodedToken = await jwtManager.encode({ id: "userId" }, 100000);
+		const encodedToken = await jwtManager.encode({ user: { id: "userId" }, expiresInMs: 100000 });
 
 		const reqId = "a-req-id";
 
@@ -105,7 +105,57 @@ describe("Refresh", () => {
 		expect(sessions[0].id).not.toBe(SessionFixtures.sessions[0].id, "new session should not have the same id as the old one");
 	});
 
-	it("should return 404 if user does not exist", async done => {
+	it("should get new access token from refresh token via service", async () => {
+
+		const encodedToken = await jwtManager.encode({ user: { id: "userId" }, expiresInMs: 100000 });
+
+		const reqId = "a-req-id";
+
+		mocks.getUsers([{
+			id: "userId",
+			firstName: "firstName",
+			lastName: "lastName",
+			mail: "mail"
+		}]);
+
+		const { status, data } = await bus.request({
+			subject: constants.endpoints.service.REFRESH_AUTH,
+			message: {
+				reqId: reqId,
+				data: {
+					refreshToken: "validToken",
+					headers: {
+						version: "13.0.1",
+						["user-agent"]: "wellbee%20Test/1184 CFNetwork/1125.2 Darwin/19.4.0",
+						authorization: `Bearer ${encodedToken}`
+					},
+					additionalPayload: {
+						abc: { id: "test-id-for-additional" }
+					}
+				},
+			}
+		});
+
+		expect(status).toBe(200);
+
+		const { id, abc } = jwt.decode(data.accessToken, conf.secret);
+		expect(id).toBe("userId");
+		expect(abc.id).toBe("test-id-for-additional");
+
+		const sessions = await sessionCollection.find({ userId: "userId" }).toArray();
+
+		expect(sessions.length).toBe(1);
+
+		expect(sessions[0]).toBeDefined();
+		expect(sessions[0].sessionDetails).toBeDefined();
+		expect(sessions[0].sessionDetails.created).toBeDefined();
+		expect(sessions[0].sessionDetails.lastActivity).toBeDefined();
+		expect(sessions[0].sessionDetails.userAgent).toBeDefined();
+		expect(sessions[0].sessionDetails.version).toBeDefined();
+		expect(sessions[0].id).not.toBe(SessionFixtures.sessions[0].id);
+	});
+
+	it("should return 404 if user does not exist", async () => {
 		const reqId = "a-req-id";
 
 		mocks.getUsers([]);
@@ -120,16 +170,14 @@ describe("Refresh", () => {
 				}
 			});
 
-			done.fail();
+			fail();
 		} catch (err) {
 			expect(err.status).toBe(404, "err.status");
 			expect(err.error.code).toBe(errors.userNotFound().error.code, "err.error.code");
-
-			done();
 		}
 	});
 
-	it("should not get new access token from expired refresh token (expired by setting `expired=true`)", async done => {
+	it("should not get new access token from expired refresh token (expired by setting `expired=true`)", async () => {
 		try {
 			await bus.request({
 				subject: constants.endpoints.http.REFRESH_AUTH,
@@ -140,16 +188,14 @@ describe("Refresh", () => {
 				}
 			});
 
-			done.fail();
+			fail();
 		} catch (err) {
 			expect(err.status).toBe(420);
 			expect(err.error.code).toBe(errors.code.refreshTokenExpired);
-
-			done();
 		}
 	});
 
-	it("should not get new access token from expired refresh token (expired by date)", async done => {
+	it("should not get new access token from expired refresh token (expired by date)", async () => {
 		try {
 			await bus.request({
 				subject: constants.endpoints.http.REFRESH_AUTH,
@@ -160,12 +206,10 @@ describe("Refresh", () => {
 				}
 			});
 
-			done.fail();
+			fail();
 		} catch (err) {
 			expect(err.status).toBe(420);
 			expect(err.error.code).toBe(errors.code.refreshTokenExpired);
-
-			done();
 		}
 	});
 
