@@ -54,6 +54,9 @@ module.exports = {
 	/** `user-service.get-users-by-query` response has `profile` attribute. This key for avoid duplicate profile keys */
 	userDataResponseKey: process.env.USER_DATA_RESPONSE_KEY || "profile",
 
+	/** If deactivated users (with a value in deactivated field) should be able to login. Defaults to true */
+	deactivatedUsersCanLogin: (process.env.DEACTIVATED_USERS_CAN_LOGIN === "false") ? false : true,
+
 	/**
 	 * If to prolong the session ttl when user is active.
 	 */

@@ -410,4 +410,49 @@ describe("Cookie login", () => {
 		expect(decodedJWT.exp).toBeDefined();
 	});
 
+	it("deactivated user cannot login", async () => {
+		conf.deactivatedUsersCanLogin = false;
+		mocks.getUsers([{ id: "id", firstName: "firstName", lastName: "lastName", email: "email", deactivated: new Date() }])
+		mocks.validatePassword();
+
+		try {
+			await bus.request({
+				subject: constants.endpoints.http.LOGIN_WITH_COOKIE,
+				skipOptionsRequest: true,
+				message: {
+					reqId:"reqId",
+					data: {
+						username: "username",
+						password: "password"
+					}
+				}
+			});
+		} catch (err) {
+			expect(err.status).toBe(403);
+			expect(err.error.code).toBe("auth-service.403.2");
+			return;
+		}
+		fail("Expected error to be thrown");
+	});
+
+	it("deactivated user can login if deactivatedUsersCanLogin=true", async () => {
+		conf.deactivatedUsersCanLogin = true;
+		mocks.getUsers([{ id: "id", firstName: "firstName", lastName: "lastName", email: "email", deactivated: new Date() }])
+		mocks.validatePassword();
+
+		const response = await bus.request({
+				subject: constants.endpoints.http.LOGIN_WITH_COOKIE,
+				skipOptionsRequest: true,
+				message: {
+					reqId:"reqId",
+					data: {
+						username: "username",
+						password: "password"
+					}
+				}
+		});
+
+		expect(response.status).toBe(200);
+	});
+
 });
