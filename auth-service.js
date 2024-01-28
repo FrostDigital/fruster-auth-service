@@ -77,7 +77,6 @@ module.exports.start = async (busAddress, mongoUrl) => {
 
 	bus.subscribe({
 		subject: constants.endpoints.http.CONVERT_TOKEN_TO_COOKIE,
-		mustBeLoggedIn: true,
 		docs: docs.http.CONVERT_TOKEN_TO_COOKIE,
 	}, req => convertTokenToCookieHandler.handleHttp(req));
 
