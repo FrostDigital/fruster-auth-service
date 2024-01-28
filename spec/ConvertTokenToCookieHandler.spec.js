@@ -60,6 +60,45 @@ describe("ConvertTokenToCookieHandler", () => {
 		expect(decodedJWT.salt).toBeDefined("salt");
 	});
 
+	it("should return Set-Cookie header when converting token in query string to cookie", async () => {
+		const reqId = "a-req-id";
+
+		mocks.getUsers([{ id: "id", firstName: "firstName", lastName: "lastName", email: "email" }])
+		mocks.validatePassword();
+
+		const tokenResponse = await bus.request({
+			subject: constants.endpoints.http.LOGIN_WITH_TOKEN,
+			skipOptionsRequest: true,
+			message: {
+				reqId: reqId,
+				data: { username: "joelsoderstrom", password: "ZlatansPonyTail" }
+			}
+		});
+
+		const convertTokenToCookieResponse = await bus.request({
+			subject: constants.endpoints.http.CONVERT_TOKEN_TO_COOKIE,
+			skipOptionsRequest: true,
+			message: {
+				reqId: reqId,
+				user: { id: "id", roles: ["user"], scopes: ["user.be"] },
+				query: {
+					token: tokenResponse.data.accessToken
+				}
+			}
+		});
+
+		expect(convertTokenToCookieResponse.status).toBe(200);
+		expect(convertTokenToCookieResponse.headers["Set-Cookie"]).toContain(tokenResponse.data.accessToken);
+		expect(convertTokenToCookieResponse.headers["Content-Type"]).toBeUndefined();
+		expect(convertTokenToCookieResponse.data).toBeUndefined("Response should have no data");
+
+		const decodedJWT = await jwtManager.decode(convertTokenToCookieResponse.headers["Set-Cookie"].replace("jwt=", "").substring(0, 204));
+
+		expect(decodedJWT.id).toBe("id");
+		expect(decodedJWT.exp).toBeDefined("exp");
+		expect(decodedJWT.salt).toBeDefined("salt");
+	});
+
 	it("should be possible to set redirect url", async () => {
 		const reqId = "a-req-id";
 		const redirect = "http://www.redirect.co.uk";
